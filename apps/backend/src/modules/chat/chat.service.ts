@@ -50,7 +50,15 @@ export class ChatService {
       orderBy: { createdAt: 'asc' },
       select: { role: true, content: true, widget: true, createdAt: true },
     });
-    return { sessionId: session.id, messages };
+    return {
+      sessionId: session.id,
+      messages: messages.map((message) => ({
+        role: message.role,
+        content: message.content,
+        widget: message.widget ?? undefined,
+        createdAt: message.createdAt,
+      })),
+    };
   }
 
   async sendMessage(id: string, dto: SendMessageDto, requester: Requester) {
@@ -88,9 +96,14 @@ export class ChatService {
     return { sessionId: session.id, stream };
   }
 
-  async saveAssistantMessage(sessionId: string, content: string) {
+  async saveAssistantMessage(sessionId: string, content: string, widget?: unknown) {
     await this.prisma.tutorMessage.create({
-      data: { sessionId, role: 'assistant', content },
+      data: {
+        sessionId,
+        role: 'assistant',
+        content,
+        ...(widget ? { widget: widget as never } : {}),
+      },
     });
   }
 

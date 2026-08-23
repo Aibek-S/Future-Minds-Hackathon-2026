@@ -1,4 +1,5 @@
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
+import { AiWidget } from './widgets/ai-widgets.registry';
 
 export type AiTask = 'chat' | 'chat_with_profile';
 
@@ -33,11 +34,16 @@ export interface AiToolCallsChunk {
   toolCalls: unknown[];
 }
 
+export interface AiWidgetChunk {
+  type: 'widget';
+  widget: AiWidget;
+}
+
 export interface AiDoneChunk {
   type: 'done';
   usage: AiUsage;
 }
 
-export type AiStreamChunk = AiTextChunk | AiToolCallsChunk | AiDoneChunk;
+export type AiStreamChunk = AiTextChunk | AiToolCallsChunk | AiWidgetChunk | AiDoneChunk;
 
 export type AiStream = AsyncIterable<AiStreamChunk>;

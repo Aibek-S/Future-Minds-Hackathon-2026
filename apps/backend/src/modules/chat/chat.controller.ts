@@ -29,7 +29,7 @@ export class ChatController {
 
   /**
    * Sends a message and streams the assistant answer over SSE.
-   * Events: `message` (text chunk), `toolCalls`, `done` (usage), `error`.
+   * Events: `message` (text chunk), `widget`, `done` (usage), `error`.
    */
   @Post('sessions/:id/messages')
   async sendMessage(
@@ -45,6 +45,7 @@ export class ChatController {
     response.flushHeaders();
 
     let assistantText = '';
+    const widgets: unknown[] = [];
 
     try {
       const { stream } = await this.chatService.sendMessage(id, dto, request.user);
@@ -55,8 +56,9 @@ export class ChatController {
             assistantText += chunk.text;
             this.writeEvent(response, 'message', { text: chunk.text });
             break;
-          case 'toolCalls':
-            this.writeEvent(response, 'toolCalls', { toolCalls: chunk.toolCalls });
+          case 'widget':
+            widgets.push(chunk.widget);
+            this.writeEvent(response, 'widget', { widget: chunk.widget });
             break;
           case 'done':
             this.writeEvent(response, 'done', { usage: chunk.usage });
@@ -64,7 +66,10 @@ export class ChatController {
         }
       }
 
-      await this.chatService.saveAssistantMessage(id, assistantText);
+      // Persist the last widget (a message carries at most one primary widget
+      // for simplicity of the chat UI); full multi-widget support can store
+      // the whole array if needed later.
+      await this.chatService.saveAssistantMessage(id, assistantText, widgets[widgets.length - 1]);
       response.end();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';

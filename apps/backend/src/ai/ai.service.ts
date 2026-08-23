@@ -10,6 +10,7 @@ import { AiToolsService } from './tools/ai-tools.service';
 import { AiGenerateOptions, AiResult, AiStream, AiStreamChunk } from './ai.types';
 import { AI_ENV, DEFAULTS } from './ai.constants';
 import { CHAT_SYSTEM_PROMPT, CHAT_WITH_PROFILE_SYSTEM_PROMPT } from './prompts/chat.prompt';
+import { parseSegments } from './widgets/ai-segments';
 
 interface ChainEntry {
   provider: AiProvider;
@@ -60,6 +61,31 @@ export class AiService {
       return;
     }
 
+    const wantsSegments = this.taskWantsWidgets(options.task);
+
+    if (wantsSegments) {
+      // Widget-bearing reply: buffer the full model text (tools executed
+      // server-side), parse { segments: [...] }, then emit text/widget chunks
+      // in strict order so each widget lands exactly where the model intended.
+      const response = await this.runWithTools(chain, messages, tools, studentId, false);
+      const usage = {
+        inputTokens: response.inputTokens,
+        outputTokens: response.outputTokens,
+        model: this.lastModel,
+        provider: this.lastKind,
+      };
+      const segments = parseSegments(response.text);
+      for (const segment of segments) {
+        if (segment.kind === 'text') {
+          yield { type: 'text', text: segment.text };
+        } else {
+          yield { type: 'widget', widget: segment.widget };
+        }
+      }
+      yield { type: 'done', usage };
+      return;
+    }
+
     const queue: AiStreamChunk[] = [];
     const waiters: Array<() => void> = [];
     let finished = false;
@@ -77,8 +103,6 @@ export class AiService {
 
     const producer = (async () => {
       try {
-        // Stream only the FINAL assistant answer; tool executions happen
-        // server-side and are not surfaced as separate stream events.
         const response = await this.runWithTools(chain, messages, tools, studentId, true, (chunk) => {
           if (chunk.type === 'text' && chunk.text) {
             push({ type: 'text', text: chunk.text });
@@ -148,8 +172,14 @@ export class AiService {
       messages = [...messages, ...toolMessages];
     }
 
-    this.logger.warn(`Tool loop reached ${MAX_TOOL_ITERATIONS} iterations, returning last response`);
-    return aggregated as AiProviderResponse;
+    // The model kept requesting tools instead of producing a final answer.
+    // Retry once WITHOUT tools so it is forced to reply with text.
+    this.logger.warn(`Tool loop reached ${MAX_TOOL_ITERATIONS} iterations; forcing a plain-text retry`);
+    const plainResponse = await this.runChain(chain, messages, [], stream, onChunk);
+    if (plainResponse.text.trim() || !aggregated) {
+      return plainResponse;
+    }
+    return aggregated;
   }
 
   private async executeToolCalls(calls: ToolCall[], studentId: string): Promise<ChatCompletionMessageParam[]> {
@@ -204,6 +234,10 @@ export class AiService {
       default:
         return CHAT_SYSTEM_PROMPT;
     }
+  }
+
+  private taskWantsWidgets(task: AiGenerateOptions['task']): boolean {
+    return task === 'chat_with_profile';
   }
 
   private maxContextTokens(): number {

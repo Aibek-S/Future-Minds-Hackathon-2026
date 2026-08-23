@@ -6,9 +6,10 @@ import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
+import { WidgetExamples, WidgetRenderer } from './widgets';
 
 type User = { id: string; role: 'STUDENT' | 'TEACHER'; student?: { id: string } };
-type ChatMessage = { role: 'user' | 'assistant'; content: string };
+type ChatMessage = { role: 'user' | 'assistant'; content: string; widget?: unknown };
 type SessionInfo = { id: string; createdAt: string; messageCount?: number };
 
 const defaultApiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3002/v1';
@@ -126,7 +127,13 @@ export default function ChatPage() {
     try {
       const data = await request(`/chat/sessions/${sessionId}`);
       setActiveSessionId(sessionId);
-      setMessages(data.messages.map((m: { role: string; content: string }) => ({ role: m.role, content: m.content })));
+      setMessages(
+        data.messages.map((m: { role: string; content: string; widget?: unknown }) => ({
+          role: m.role,
+          content: m.content,
+          widget: m.widget ?? undefined,
+        })),
+      );
       setStatus(`Сессия ${sessionId.slice(-6)}`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Ошибка загрузки сессии');
@@ -183,6 +190,16 @@ export default function ChatPage() {
             setMessages((prev) => {
               const next = [...prev];
               next[next.length - 1] = { role: 'assistant', content: currentText };
+              return next;
+            });
+          } else if (event === 'widget') {
+            setMessages((prev) => {
+              const next = [...prev];
+              next[next.length - 1] = {
+                role: 'assistant',
+                content: currentText,
+                widget: data.widget,
+              };
               return next;
             });
           } else if (event === 'done') {
@@ -265,12 +282,20 @@ export default function ChatPage() {
           {messages.map((message, index) => (
             <div key={index} className={`bubble ${message.role}`}>
               {message.role === 'assistant' ? (
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm, [remarkMath, { singleDollarTextMath: false }]]}
-                  rehypePlugins={[[rehypeKatex, { throwOnError: false }]]}
-                >
-                  {normalizeMathDelimiters(message.content)}
-                </ReactMarkdown>
+                <>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm, [remarkMath, { singleDollarTextMath: false }]]}
+                    rehypePlugins={[[rehypeKatex, { throwOnError: false }]]}
+                  >
+                    {normalizeMathDelimiters(message.content)}
+                  </ReactMarkdown>
+                  {message.widget && (
+                    <WidgetRenderer
+                      type={String((message.widget as { type?: string }).type ?? '')}
+                      payload={(message.widget as { payload?: Record<string, unknown> }).payload ?? {}}
+                    />
+                  )}
+                </>
               ) : (
                 message.content
               )}
@@ -296,6 +321,10 @@ export default function ChatPage() {
           </p>
         )}
         <output>{status}</output>
+      </section>
+
+      <section className="panel">
+        <WidgetExamples />
       </section>
     </main>
   );
