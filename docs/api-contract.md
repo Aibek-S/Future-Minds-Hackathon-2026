@@ -408,6 +408,45 @@ curl -X POST /v1/voice-feedback \
 
 Перед удалением всем ученикам класса устанавливается `classId: null`.
 
+### `POST /classes/:id/lessons` — создать урок
+```json
+// Request
+{
+  "date": "2026-09-01T09:00:00.000Z",
+  "topicId": "top_1",
+  "planJson": {
+    "objectives": ["Решать линейные уравнения"],
+    "warmup": "Повторение",
+    "explanation": "Метод баланса",
+    "practice": ["2x + 3 = 7"],
+    "differentiatedTasks": { "weak": ["Пример с подсказкой"], "strong": ["Текстовая задача"] },
+    "assessment": "Exit ticket",
+    "homework": "Упражнения 1–5"
+  }
+}
+```
+
+### `GET /classes/:id/lessons?from=&to=` — календарь уроков
+
+Возвращает уроки класса в указанном диапазоне дат, тему и количество связанных заданий/отзывов.
+
+### `GET /lessons/:id` / `PUT /lessons/:id` / `DELETE /lessons/:id`
+
+Детали содержат связанные assignments и статусы учеников. Редактирование и удаление доступны
+только учителю-владельцу класса.
+
+### `POST /lessons/:id/feedback` — отзыв ученика
+```json
+// Request
+{ "rating": 5, "commentOrAudioUrl": "Упражнения помогли понять тему" }
+```
+
+Отзыв можно оставить только после `lesson.date` и только ученику этого класса.
+
+### `GET /lessons/:id/feedback` — отзывы по уроку
+
+Доступно учителю-владельцу класса; ответ содержит автора, рейтинг, текст или URL голосового отзыва.
+
 ### `GET /classes/:id/overview` — дашборд класса
 ```json
 // Response 200
