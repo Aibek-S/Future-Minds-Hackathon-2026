@@ -110,7 +110,7 @@ export default function HomePage() {
   }
 
   return <main className="shell">
-    <header><p className="eyebrow">Future Minds · MVP</p><h1>Тестовый клиент API</h1><p>Серый функциональный интерфейс для Student API.</p></header>
+    <header><p className="eyebrow">Future Minds · MVP</p><h1>Тестовый клиент API</h1><p>Серый функциональный интерфейс для Student API. <a href="/chat">→ Чат с ИИ-репетитором</a></p></header>
     <section className="panel"><h2>1. API и авторизация</h2>
       <form onSubmit={checkApi} className="row"><input aria-label="Base URL" value={apiUrl} onChange={(e) => setApiUrl(e.target.value)} /><button>Проверить API</button></form>
       <div className="forms"><form onSubmit={login}><h3>Войти</h3><input name="email" defaultValue="demo_student@hackathon.com" type="email" required /><input name="password" defaultValue="password123" type="password" required /><button>Логин</button></form>

@@ -270,56 +270,85 @@ Content-Type: application/json (кроме multipart для voice)
 
 ---
 
-## 5. AI Tutor (Чат с виджетами + SSE)
+## 5. AI-чаты по сценариям (SessionKind + SSE)
 
-### `POST /tutor/sessions` — создать сессию
+> Единая модель `TutorSession` с полем `kind`. Каждый сценарий — отдельный URL,
+> свой системный промпт, свои tools и виджеты, доступ только своей роли.
+
+**SessionKind:** `STUDENT_CHAT | DIAGNOSTIC | FEEDBACK | ORCHESTRATOR`
+
+| Сценарий | URL | Роль | Что делает |
+|---|---|---|---|
+| Обычный чат ученика | `/chat/sessions` | STUDENT | репетитор, знает прогресс |
+| Диагностика | `/diagnostic/sessions` | STUDENT | reverse-asking, 1 вопрос за раз |
+| Фидбэк | `/feedback/sessions` | STUDENT | анализ «что понял/повторить» |
+| Оркестратор | `/orchestrator/chat/sessions` | TEACHER | план урока по статистике класса |
+
+> Роль проверяется на бэкенде: STUDENT-чаты недоступны учителю (403) и наоборот.
+
+### `POST /{scenario}/sessions` — создать сессию сценария
 ```json
-// Request
-{ "studentId": "s_1", "topicId?: "top_2" }
-
 // Response 201
-{ "sessionId": "sess_1", "createdAt": "2026-08-21T10:00:00Z" }
+{ "sessionId": "sess_1", "kind": "DIAGNOSTIC", "createdAt": "2026-08-21T10:00:00Z" }
 ```
 
-### `POST /tutor/sessions/:id/messages` — отправить сообщение (SSE streaming)
+### `GET /{scenario}/sessions` — список своих сессий
 ```json
-// Request
-{ "role": "student", "content": "Я не понимаю производную." }
+// Response 200
+{ "sessions": [ { "id": "sess_1", "createdAt": "...", "messageCount": 4 } ] }
+```
+
+### `POST /{scenario}/sessions/:id/messages` — отправить сообщение (SSE streaming)
+```json
+// Request (для ORCHESTRATOR дополнительно передаётся classId)
+{ "content": "Что делать на следующем уроке?", "classId": "c_1" }
 
 // Response: SSE stream
 // Event: message
-data: { "role": "assistant", "content": "Смотри, у тебя mastery по функциям 81%...", "socraticMode": true }
+data: { "text": "Рекомендую повторить теорему Виета…" }
 
-// Event: widget (после полного JSON виджета)
-data: { "type": "QUIZ", "payload": { "question": "...", "options": ["A","B","C"], "correctIndex": 0 } }
+// Event: widget (в строгом порядке сегментов)
+data: { "widget": { "type": "QUIZ", "payload": { ... } } }
 
 // Event: done
-data: { "sessionId": "sess_1", "summary": { "understood": ["basic derivative"], "struggled": ["chain rule"] } }
+data: { "usage": { "inputTokens": 123, "outputTokens": 45, "model": "deepseek-chat", "provider": "deepseek" } }
 ```
 
-> **Виджеты (строгий JSON контракт, никакого HTML):**
-> - `QUIZ` — `{ question, options[], correctIndex, explanation? }`
-> - `ROADMAP` — `{ current, next[], goals[] }`
-> - `LESSON_PLAN` — `{ objectives[], warmup, explanation, practice[], homework }`
-> - `FLASHCARD` — `{ front, back, topicId }`
-
-### `GET /tutor/sessions/:id` — история сообщений
+### `GET /{scenario}/sessions/:id` — история сообщений
 ```json
 // Response 200
 {
   "sessionId": "sess_1",
+  "kind": "DIAGNOSTIC",
   "messages": [
-    { "role": "student", "content": "...", "widget?: {} },
-    { "role": "assistant", "content": "...", "widget?: {} }
-  ],
-  "summary": { "understood": [], "struggled": [], "recommendation": { "topic": "chain_rule", "difficulty": "basic" } }
+    { "role": "user", "content": "Привет", "widget": null },
+    { "role": "assistant", "content": "К чему готовишься?", "widget": { "type": "QUIZ", "payload": { ... } } }
+  ]
 }
 ```
 
-### Function Calling (внутренний, не в API)
-- `update_student_profile(goals, level, preferences)` → `PUT /students/:id`
-- `get_knowledge_state(studentId)` → `GET /students/:id/knowledge`
-- `search_materials(query, topicId)` → RAG (pgvector)
+### Виджеты (строгий JSON-контракт, без HTML; максимум `AI_MAX_WIDGETS`, дефолт 3)
+> Ответ с виджетами — JSON `{"segments":[...]}`, где каждый элемент
+> `{ "kind": "text", "text": "..." }` или `{ "kind": "widget", "widget": {...} }`.
+> Виджеты появляются ровно в порядке сегментов. Битый виджет дропается, текст сохраняется.
+
+- `QUIZ` — `{ question, options[], correctIndex, explanation? }`
+- `MATH_EXPRESSION` — `{ prompt, expected, explanation? }`
+- `FORMULA_CARD` — `{ title, formula, note? }`
+- `STEP_BY_STEP` — `{ problem, steps: [{ title, content }] }`
+- `CONFIRM` — `{ title, text, resourceType? }` (учитель: «Принять / Отклонить»)
+
+### Tools (Function Calling, выполняется на бэкенде, ИИ в БД не пишет)
+- `get_knowledge_state(studentId, subjectId?)` — mastery по темам
+- `get_subject_summary(studentId)` — сравнение предметов
+- `get_roadmap(studentId, subjectId?)` — план обучения
+- `update_student_profile(goals, preferences)` — применяется через валидированный сервис
+- `get_class_overview(classId)` — статистика класса (учитель)
+
+### Лимиты
+- `AI_MAX_WIDGETS` — макс. виджетов на сообщение (env, дефолт 3)
+- `AI_MAX_RETRIES_PRIMARY` / `AI_MAX_RETRIES_FALLBACK` — ретраи LLM
+- `AI_TIMEOUT_MS` — таймаут запроса LLM
 
 ---
 
@@ -517,7 +546,30 @@ curl -X POST /v1/voice-feedback \
 
 ## 9. AI Teacher Orchestrator
 
-### `POST /orchestrator/query` — вопрос учителю от ИИ
+> Два режима: **чат** (`/orchestrator/chat/sessions`, только TEACHER, LLM + статистика класса + CONFIRM-виджет)
+> и классический `query`/`recommendations`. Единое правило: **AI никогда не пишет в БД напрямую** —
+> только через approve учителя.
+
+### `POST /orchestrator/chat/sessions` — чат-сессия учителя (только TEACHER)
+```json
+// Response 201
+{ "sessionId": "sess_1", "kind": "ORCHESTRATOR", "createdAt": "..." }
+```
+
+### `POST /orchestrator/chat/sessions/:id/messages` — вопрос по классу (SSE)
+```json
+// Request
+{ "content": "Предложи план урока", "classId": "c_1" }
+
+// Response: SSE
+// Event: message  -> текст с обоснованием (цифры из get_class_overview)
+// Event: widget   -> { "type": "CONFIRM", "payload": { "title": "План урока", "text": "...", "resourceType": "LESSON_PLAN" } }
+// Event: done     -> usage
+```
+> Учитель подтверждает предложение кнопкой в CONFIRM-виджете, далее фронт вызывает
+> `POST /recommendations/:id/approve` (или `/reject`).
+
+### `POST /orchestrator/query` — вопрос учителю от ИИ (одноразовый)
 ```json
 // Request
 { "teacherId": "t_1", "classId": "c_1", "question": "Что делать на следующем уроке?" }
@@ -678,25 +730,28 @@ SSE-поток с Bearer JWT. При `REJECT` offline-ДЗ ученик полу
 
 **Header:** `X-Demo-User: student | teacher`
 
-Если заголовок присутствует:
-- LLM/RAG/Orchestrator ответы берутся из Redis кэша
-- Имитация задержки 300-400ms
-- Реальные провайдеры не вызываются
+> ⚠️ Планируется, не реализовано. Идея: LLM/RAG/Orchestrator ответы для demo-аккаунтов
+> берутся из Redis-кэша с имитацией задержки 300–400 мс, чтобы 3-минутное видео не зависало
+> на реальных 5–12 секундах ответа LLM.
 
 ---
 
 ## 14. Rate Limiting & Security
 
-- `@nestjs/throttler` + Redis sliding window
-- Auth endpoints: 10 req/min
-- Tutor messages: 20/hr (автономный) / 50/hr (школьный)
-- Voice: 5/hr (автономный) / 20/hr (школьный)
+- `@nestjs/throttler` (глобальный лимит; per-endpoint лимиты — в TODO)
+- Chat / Diagnostic / Feedback / Orchestrator: 20–50 сообщений/час (автономный / школьный)
+- Voice: 5/hr (автономный) / 20/hr (школьный) — TODO
 - Prompt Injection Guard: пользовательский ввод в теги `[STUDENT_INPUT_START]...[STUDENT_INPUT_END]`
+- Ролевая изоляция чатов: STUDENT-чаты — только STUDENT, Orchestrator — только TEACHER
+- Виджеты — строгий JSON-контракт, битые отбрасываются (чат не падает)
 
 ---
 
 ## 15. Что НЕ в контракте (планируется после хакатона)
 
+- RAG / Vector Search (`search_materials` + реальные embeddings) — отдельный этап
+- Voice feedback (STT Whisper + анализ) — отдельный этап
+- WebSocket Realtime (heatmap live) — отдельный этап
 - Пагинация для всех списков (добавить при росте данных)
 - ТТS (голосовые ответы ИИ)
 - Мультиязычность (kz/en)
