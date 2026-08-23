@@ -578,10 +578,17 @@ curl -X POST /v1/voice-feedback \
 }
 
 // Response 201
-{ "assignmentId": "asg_1", "studentAssignments": [...] }
+{ "id": "asg_1", "studentAssignments": [...] }
 ```
 
+Для ONLINE `taskIds` обязательны и каждая задача должна принадлежать указанной теме. При
+`isUnique: true` все `targetIds` обязательны и должны быть учениками этого класса; иначе ДЗ
+создаётся для всех учеников класса.
+
 ### `GET /assignments/:id` — детали задания
+
+Доступно учителю-владельцу класса; ответ содержит тему, урок при наличии, задачи и статусы
+`studentAssignments` с именами учеников.
 
 ### `POST /student-assignments/:id/submit` — ученик сдаёт (ONLINE: ответ, OFFLINE: "Сдал в классе")
 ```json
@@ -594,12 +601,18 @@ curl -X POST /v1/voice-feedback \
 { "status": "AI_GRADED" | "PENDING_VERIFICATION" }
 ```
 
+ONLINE принимает ровно один ответ на каждую задачу и сохраняет результат `AnswerChecker`.
+OFFLINE переводится в `PENDING_VERIFICATION` только после `{ "submittedInClass": true }`.
+
 ### `POST /student-assignments/:id/verify` — учитель проверяет OFFLINE
 ```json
 // Request
 { "action": "APPROVE" | "REJECT", "comment?: "Нужно перерешать" }
 // Response 200 — { "status": "TEACHER_VERIFIED" | "REVISION_REQUIRED" }
 ```
+
+Проверять можно только submitted OFFLINE-работу. Для `REJECT` обязателен `comment`, который
+сохраняется вместе с отправленной работой.
 
 ---
 
