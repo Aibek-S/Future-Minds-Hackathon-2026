@@ -22,32 +22,31 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
 
-    const user = await this.prisma.user.create({
-      data: {
-        email: dto.email,
-        passwordHash,
-        name: dto.name,
-        role: dto.role,
-        phone: dto.phone,
-      },
+    const user = await this.prisma.$transaction(async (transaction) => {
+      const createdUser = await transaction.user.create({
+        data: {
+          email: dto.email,
+          passwordHash,
+          name: dto.name,
+          role: dto.role,
+          phone: dto.phone,
+        },
+      });
+
+      if (dto.role === 'STUDENT') {
+        await transaction.student.create({
+          data: { userId: createdUser.id, grade: dto.grade },
+        });
+      } else {
+        await transaction.teacher.create({
+          data: { userId: createdUser.id },
+        });
+      }
+
+      return createdUser;
     });
 
     const tokens = await this.generateTokens(user.id, user.role);
-
-    if (dto.role === 'STUDENT') {
-      await this.prisma.student.create({
-        data: {
-          userId: user.id,
-          grade: dto.grade,
-        },
-      });
-    } else if (dto.role === 'TEACHER') {
-      await this.prisma.teacher.create({
-        data: {
-          userId: user.id,
-        },
-      });
-    }
 
     return {
       user: { id: user.id, name: user.name, role: user.role },

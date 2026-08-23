@@ -36,7 +36,7 @@ export class StudentsService {
         where: { id },
         data: {
           ...(dto.grade === undefined ? {} : { grade: dto.grade }),
-          ...(dto.goals === undefined ? {} : { goals: dto.goals as Prisma.InputJsonValue }),
+          ...(dto.goals === undefined ? {} : { goals: dto.goals as unknown as Prisma.InputJsonValue }),
           ...(dto.preferences === undefined
             ? {}
             : { preferences: dto.preferences as Prisma.InputJsonValue }),

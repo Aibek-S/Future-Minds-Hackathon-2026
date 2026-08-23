@@ -4,7 +4,6 @@ import { ApiProperty } from '@nestjs/swagger';
 export enum UserRole {
   STUDENT = 'STUDENT',
   TEACHER = 'TEACHER',
-  ADMIN = 'ADMIN',
 }
 
 export class RegisterDto {
