@@ -11,6 +11,7 @@ import { ClassesModule } from './modules/classes/classes.module';
 import { LessonsModule } from './modules/lessons/lessons.module';
 import { AssignmentsModule } from './modules/assignments/assignments.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { OrchestratorModule } from './modules/orchestrator/orchestrator.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     LessonsModule,
     AssignmentsModule,
     DashboardModule,
+    OrchestratorModule,
   ],
 })
 export class AppModule {}

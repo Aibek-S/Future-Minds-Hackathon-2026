@@ -557,9 +557,10 @@ curl -X POST /v1/voice-feedback \
 { "edits": { "revisionMinutes": 10 } }
 
 // Response 200
-{ "id": "rec_1", "status": "approved" }
+{ "id": "rec_1", "status": "approved", "lessonId": "lesson_1" }
 ```
-> Создаёт `assignments` + `student_assignments` на основе `payload`.
+> Для рекомендации `LESSON_PLAN` создаёт Lesson на основе `payload`; `edits` может изменить
+> `topicId`, `date` или полный `planJson`, который повторно валидируется по схеме урока.
 
 ### `POST /recommendations/:id/reject`
 ```json
