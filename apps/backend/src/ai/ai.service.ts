@@ -9,7 +9,7 @@ import { AiRouterService } from './ai.router';
 import { AiToolsService } from './tools/ai-tools.service';
 import { AiGenerateOptions, AiResult, AiStream, AiStreamChunk } from './ai.types';
 import { AI_ENV, DEFAULTS } from './ai.constants';
-import { CHAT_SYSTEM_PROMPT } from './prompts/chat.prompt';
+import { CHAT_SYSTEM_PROMPT, CHAT_WITH_PROFILE_SYSTEM_PROMPT } from './prompts/chat.prompt';
 
 interface ChainEntry {
   provider: AiProvider;
@@ -198,7 +198,7 @@ export class AiService {
   private systemPrompt(task: AiGenerateOptions['task']): string {
     switch (task) {
       case 'chat_with_profile':
-        return CHAT_SYSTEM_PROMPT;
+        return CHAT_WITH_PROFILE_SYSTEM_PROMPT;
       case 'chat':
         return CHAT_SYSTEM_PROMPT;
       default:
