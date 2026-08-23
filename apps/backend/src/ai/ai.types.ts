@@ -1,12 +1,14 @@
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
-export type AiTask = 'chat';
+export type AiTask = 'chat' | 'chat_with_profile';
 
 export interface AiGenerateOptions {
   task: AiTask;
   messages: ChatCompletionMessageParam[];
   tools?: unknown[];
   stream?: boolean;
+  /** Resolved from the authenticated user; used to scope tool execution. */
+  studentId?: string;
 }
 
 export interface AiUsage {

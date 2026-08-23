@@ -100,12 +100,10 @@ export class AiProvider {
       }
     }
 
-    const toolCalls = [...toolCallParts.values()]
-      .sort((left, right) => Number(left.id ?? 0) - Number(right.id ?? 0))
-      .map((part) => ({
-        id: part.id,
-        function: { name: part.name ?? '', arguments: part.arguments },
-      }));
+    const toolCalls = [...toolCallParts.values()].map((part) => ({
+      id: part.id,
+      function: { name: part.name ?? '', arguments: part.arguments },
+    }));
     if (toolCalls.length) {
       options.onChunk?.({ type: 'toolCalls', toolCalls });
     }

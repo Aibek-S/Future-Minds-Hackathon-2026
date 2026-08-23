@@ -5,6 +5,7 @@ import { AiRetryService } from './ai.retry';
 import { AiRouterService } from './ai.router';
 import { AiService } from './ai.service';
 import { AiTiktokenService } from './ai.tiktoken';
+import { AiToolsService } from './tools/ai-tools.service';
 
 @Global()
 @Module({
@@ -15,7 +16,8 @@ import { AiTiktokenService } from './ai.tiktoken';
     AiContextService,
     AiTiktokenService,
     AiMockProvider,
+    AiToolsService,
   ],
-  exports: [AiService],
+  exports: [AiService, AiToolsService],
 })
 export class AiModule {}

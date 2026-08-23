@@ -2,6 +2,7 @@ import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/commo
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AiService } from '../../ai/ai.service';
+import { AI_TOOL_DEFINITIONS, AI_TOOLS_BY_TASK, toOpenAITools } from '../../ai/tools/ai-tools.registry';
 import { SendMessageDto } from './dto/send-message.dto';
 
 type Requester = { id: string; role: string };
@@ -70,10 +71,18 @@ export class ChatService {
       content: message.content,
     }));
 
+    // Student sessions get read tools + profile update; teacher/admin get
+    // read-only tools (no profile mutations).
+    const isStudent = requester.role === 'STUDENT' && !!session.studentId;
+    const task = isStudent ? 'chat_with_profile' : 'chat';
+    const tools = toOpenAITools(AI_TOOL_DEFINITIONS.filter((tool) => AI_TOOLS_BY_TASK[task].includes(tool.name)));
+
     const stream = await this.ai.generateStream({
-      task: 'chat',
+      task,
       messages,
+      tools,
       stream: true,
+      studentId: session.studentId ?? undefined,
     });
 
     return { sessionId: session.id, stream };

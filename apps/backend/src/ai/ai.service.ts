@@ -6,6 +6,7 @@ import { AiMockProvider } from './ai.mock';
 import { AiProvider, AiProviderChunk, AiProviderResponse } from './ai.provider';
 import { AiRetryService } from './ai.retry';
 import { AiRouterService } from './ai.router';
+import { AiToolsService } from './tools/ai-tools.service';
 import { AiGenerateOptions, AiResult, AiStream, AiStreamChunk } from './ai.types';
 import { AI_ENV, DEFAULTS } from './ai.constants';
 import { CHAT_SYSTEM_PROMPT } from './prompts/chat.prompt';
@@ -14,6 +15,13 @@ interface ChainEntry {
   provider: AiProvider;
   maxRetries: number;
 }
+
+interface ToolCall {
+  id?: string;
+  function?: { name?: string; arguments?: string };
+}
+
+const MAX_TOOL_ITERATIONS = 3;
 
 @Injectable()
 export class AiService {
@@ -25,11 +33,12 @@ export class AiService {
     private readonly context: AiContextService,
     private readonly mock: AiMockProvider,
     private readonly config: ConfigService,
+    private readonly tools: AiToolsService,
   ) {}
 
-  /** Non-streaming generation: returns the full answer and exact token usage. */
+  /** Non-streaming generation: runs the tool loop, returns final answer + usage. */
   async generate(options: AiGenerateOptions): Promise<AiResult> {
-    const { messages, tools } = this.prepare(options);
+    const { messages, tools, studentId } = this.prepare(options);
     const chain = this.router.buildChain();
 
     if (chain.length === 0) {
@@ -37,13 +46,13 @@ export class AiService {
       return this.toResult(response.text, response.inputTokens, response.outputTokens, 'mock', 'mock');
     }
 
-    const response = await this.runChain(chain, messages, tools, false);
+    const response = await this.runWithTools(chain, messages, tools, studentId, false);
     return this.toResult(response.text, response.inputTokens, response.outputTokens, this.lastModel, this.lastKind);
   }
 
-  /** Streaming generation: yields chunks as they arrive from the provider. */
+  /** Streaming generation: streams final text, executes tools transparently. */
   async *generateStream(options: AiGenerateOptions): AiStream {
-    const { messages, tools } = this.prepare(options);
+    const { messages, tools, studentId } = this.prepare(options);
     const chain = this.router.buildChain();
 
     if (chain.length === 0) {
@@ -55,7 +64,6 @@ export class AiService {
     const waiters: Array<() => void> = [];
     let finished = false;
     let failed: Error | null = null;
-    let toolCalls: unknown[] = [];
 
     const push = (chunk: AiStreamChunk) => {
       queue.push(chunk);
@@ -69,16 +77,13 @@ export class AiService {
 
     const producer = (async () => {
       try {
-        const response = await this.runChain(chain, messages, tools, true, (chunk) => {
+        // Stream only the FINAL assistant answer; tool executions happen
+        // server-side and are not surfaced as separate stream events.
+        const response = await this.runWithTools(chain, messages, tools, studentId, true, (chunk) => {
           if (chunk.type === 'text' && chunk.text) {
             push({ type: 'text', text: chunk.text });
-          } else if (chunk.type === 'toolCalls') {
-            toolCalls = chunk.toolCalls ?? [];
           }
         });
-        if (toolCalls.length) {
-          push({ type: 'toolCalls', toolCalls });
-        }
         push({
           type: 'done',
           usage: {
@@ -110,6 +115,75 @@ export class AiService {
     }
   }
 
+  /**
+   * Runs the provider chain, and if the model requests tool calls, executes
+   * them (scoped to the authenticated student) and feeds the results back
+   * into the conversation until the model produces a final text answer.
+   */
+  private async runWithTools(
+    chain: ChainEntry[],
+    initialMessages: ChatCompletionMessageParam[],
+    tools: unknown[],
+    studentId: string | undefined,
+    stream: boolean,
+    onChunk?: (chunk: AiProviderChunk) => void,
+  ): Promise<AiProviderResponse> {
+    if (!tools.length || !studentId) {
+      return this.runChain(chain, initialMessages, tools, stream, onChunk);
+    }
+
+    let messages = initialMessages;
+    let aggregated: AiProviderResponse | null = null;
+
+    for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration += 1) {
+      const response = await this.runChain(chain, messages, tools, stream, onChunk);
+      aggregated = response;
+      const calls = this.normalizeToolCalls(response.toolCalls);
+
+      if (!calls.length) {
+        return response;
+      }
+
+      const toolMessages = await this.executeToolCalls(calls, studentId);
+      messages = [...messages, ...toolMessages];
+    }
+
+    this.logger.warn(`Tool loop reached ${MAX_TOOL_ITERATIONS} iterations, returning last response`);
+    return aggregated as AiProviderResponse;
+  }
+
+  private async executeToolCalls(calls: ToolCall[], studentId: string): Promise<ChatCompletionMessageParam[]> {
+    const messages: ChatCompletionMessageParam[] = [];
+    for (const call of calls) {
+      const name = call.function?.name ?? 'unknown';
+      let parsed: Record<string, unknown> = {};
+      try {
+        parsed = JSON.parse(call.function?.arguments ?? '{}');
+      } catch {
+        parsed = {};
+      }
+      let result: string;
+      try {
+        result = await this.tools.execute(name, parsed, { studentId });
+      } catch (error) {
+        result = JSON.stringify({ error: error instanceof Error ? error.message : 'Tool failed' });
+      }
+      messages.push({
+        role: 'tool',
+        tool_call_id: call.id ?? '',
+        content: result,
+      });
+    }
+    return messages;
+  }
+
+  private normalizeToolCalls(toolCalls: unknown): ToolCall[] {
+    if (!Array.isArray(toolCalls)) {
+      return [];
+    }
+    return toolCalls as ToolCall[];
+  }
+
   private prepare(options: AiGenerateOptions) {
     const system: ChatCompletionMessageParam = { role: 'system', content: this.systemPrompt(options.task) };
     const budget = this.maxContextTokens();
@@ -117,11 +191,14 @@ export class AiService {
     return {
       messages: [system, ...trimmed],
       tools: options.tools ?? [],
+      studentId: options.studentId,
     };
   }
 
   private systemPrompt(task: AiGenerateOptions['task']): string {
     switch (task) {
+      case 'chat_with_profile':
+        return CHAT_SYSTEM_PROMPT;
       case 'chat':
         return CHAT_SYSTEM_PROMPT;
       default:
