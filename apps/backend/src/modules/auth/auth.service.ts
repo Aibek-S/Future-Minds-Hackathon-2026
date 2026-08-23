@@ -28,6 +28,7 @@ export class AuthService {
         passwordHash,
         name: dto.name,
         role: dto.role,
+        phone: dto.phone,
       },
     });
 
@@ -37,7 +38,7 @@ export class AuthService {
       await this.prisma.student.create({
         data: {
           userId: user.id,
-          grade: dto.grade || 9,
+          grade: dto.grade,
         },
       });
     } else if (dto.role === 'TEACHER') {
@@ -48,10 +49,7 @@ export class AuthService {
       });
     }
 
-    return {
-      user: { id: user.id, name: user.name, role: user.role },
-      ...tokens,
-    };
+    return tokens;
   }
 
   async login(dto: LoginDto) {
@@ -90,14 +88,37 @@ export class AuthService {
         throw new UnauthorizedException('User not found');
       }
 
-      return this.generateTokens(user.id, user.role);
+      const { accessToken } = await this.generateTokens(user.id, user.role);
+      return { accessToken };
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
   }
 
   async validateUser(userId: string) {
-    return this.prisma.user.findUnique({ where: { id: userId } });
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phone: true,
+        role: true,
+        student: {
+          select: {
+            id: true,
+            grade: true,
+            classId: true,
+            goals: true,
+            preferences: true,
+            createdAt: true,
+          },
+        },
+        teacher: {
+          select: { id: true },
+        },
+      },
+    });
   }
 
   private async generateTokens(userId: string, role: string) {

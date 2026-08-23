@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MinLength, MaxLength, IsEnum, IsOptional, IsInt, Min, Max } from 'class-validator';
+import { IsEmail, IsString, MinLength, MaxLength, IsEnum, IsOptional, IsInt, Min, Max, ValidateIf } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export enum UserRole {
@@ -28,12 +28,18 @@ export class RegisterDto {
   @IsEnum(UserRole)
   role: UserRole;
 
-  @ApiProperty({ example: 9, required: false })
-  @IsOptional()
+  @ApiProperty({ example: 9, required: false, description: 'Required when role is STUDENT' })
+  @ValidateIf((dto) => dto.role === UserRole.STUDENT)
   @IsInt()
   @Min(7)
   @Max(12)
-  grade?: number;
+  grade: number;
+
+  @ApiProperty({ example: '+77001234567', required: false })
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  phone?: string;
 }
 
 export class LoginDto {
