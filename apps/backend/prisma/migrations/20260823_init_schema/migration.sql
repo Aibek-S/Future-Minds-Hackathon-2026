@@ -1,0 +1,1 @@
+-- Baseline migration applied via raw SQL
