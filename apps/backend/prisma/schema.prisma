@@ -50,64 +50,64 @@ enum FeedbackTargetType {
 }
 
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  passwordHash  String
-  name          String
-  phone         String?
-  role          Role     @default(STUDENT)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  phone        String?
+  role         Role     @default(STUDENT)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  student       Student?
-  teacher       Teacher?
-  feedbacks     Feedback[]
-  sessions      TutorSession[]
+  student   Student?
+  teacher   Teacher?
+  feedbacks Feedback[]
+  sessions  TutorSession[]
 }
 
 model Student {
-  id            String   @id @default(cuid())
-  userId        String   @unique
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  grade         Int
-  classId       String?
-  class         Class?   @relation(fields: [classId], references: [id], onDelete: SetNull)
-  goals         Json     @default("[]")
-  preferences   Json?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  grade       Int
+  classId     String?
+  class       Class?   @relation(fields: [classId], references: [id], onDelete: SetNull)
+  goals       Json     @default("[]")
+  preferences Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  knowledge     StudentKnowledge[]
-  attempts      Attempt[]
-  mistakes      Mistake[]
-  assignments   StudentAssignment[]
-  sessions      TutorSession[]
+  knowledge   StudentKnowledge[]
+  attempts    Attempt[]
+  mistakes    Mistake[]
+  assignments StudentAssignment[]
+  sessions    TutorSession[]
 }
 
 model Teacher {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  classes   Class[]
-  lessons   Lesson[]
+  id              String             @id @default(cuid())
+  userId          String             @unique
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classes         Class[]
+  lessons         Lesson[]
   recommendations AiRecommendation[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
 }
 
 model Class {
-  id        String   @id @default(cuid())
-  code      String   @unique
-  name      String
-  grade     Int
-  teacherId String
-  teacher   Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  students  Student[]
-  lessons   Lesson[]
-  assignments Assignment[]
+  id              String             @id @default(cuid())
+  code            String             @unique
+  name            String
+  grade           Int
+  teacherId       String
+  teacher         Teacher            @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  students        Student[]
+  lessons         Lesson[]
+  assignments     Assignment[]
   recommendations AiRecommendation[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
 
   @@index([teacherId])
 }
@@ -118,48 +118,53 @@ model Lesson {
   teacher   Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   classId   String
   class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  topicId   String?
+  topic     Topic?   @relation(fields: [topicId], references: [id], onDelete: SetNull)
   date      DateTime
   planJson  Json
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   assignments Assignment[]
-  feedbacks   Feedback[] @relation("LessonFeedback")
+  feedbacks   Feedback[]   @relation("LessonFeedback")
 
   @@index([classId, date])
+  @@index([topicId])
 }
 
 model Subject {
-  id   String @id @default(cuid())
-  name String @unique
+  id     String  @id @default(cuid())
+  name   String  @unique
   topics Topic[]
 }
 
 model Topic {
-  id               String   @id @default(cuid())
-  name             String
-  subjectId        String
-  subject          Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  parentTopicId    String?
-  parentTopic      Topic?   @relation("TopicHierarchy", fields: [parentTopicId], references: [id], onDelete: SetNull)
-  childTopics      Topic[]  @relation("TopicHierarchy")
-  prerequisites    String[]
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id            String   @id @default(cuid())
+  name          String
+  subjectId     String
+  subject       Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  parentTopicId String?
+  parentTopic   Topic?   @relation("TopicHierarchy", fields: [parentTopicId], references: [id], onDelete: SetNull)
+  childTopics   Topic[]  @relation("TopicHierarchy")
+  prerequisites String[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  tasks            Task[]
-  knowledge        StudentKnowledge[]
-  materialsVector  MaterialVector[]
-  mistakes         Mistake[]
-  assignments      Assignment[]
+  tasks           Task[]
+  knowledge       StudentKnowledge[]
+  materialsVector MaterialVector[]
+  mistakes        Mistake[]
+  assignments     Assignment[]
+  lessons         Lesson[]
 
   @@index([subjectId])
   @@index([parentTopicId])
 }
 
 model MaterialVector {
-  id        String  @id @default(cuid())
+  id        String                      @id @default(cuid())
   topicId   String
-  topic     Topic   @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  topic     Topic                       @relation(fields: [topicId], references: [id], onDelete: Cascade)
   content   String
   metadata  Json
   embedding Unsupported("vector(1536)")
@@ -170,13 +175,13 @@ model MaterialVector {
 }
 
 model Task {
-  id            String @id @default(cuid())
+  id            String   @id @default(cuid())
   topicId       String
-  topic         Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  topic         Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
   difficulty    String
   content       String
   correctAnswer String?
-  source        String @default("manual")
+  source        String   @default("manual")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -187,15 +192,15 @@ model Task {
 }
 
 model Attempt {
-  id              String   @id @default(cuid())
-  taskId          String
-  task            Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  studentId       String
-  student         Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  answer          String
-  attemptNumber   Int
-  correct         Boolean
-  createdAt       DateTime @default(now())
+  id            String   @id @default(cuid())
+  taskId        String
+  task          Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  studentId     String
+  student       Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  answer        String
+  attemptNumber Int
+  correct       Boolean
+  createdAt     DateTime @default(now())
 
   @@index([studentId, taskId])
   @@index([studentId, createdAt])
@@ -229,36 +234,37 @@ model Mistake {
 }
 
 model Assignment {
-  id          String           @id @default(cuid())
-  lessonId    String?
-  lesson      Lesson?          @relation(fields: [lessonId], references: [id], onDelete: SetNull)
-  classId     String
-  class       Class            @relation(fields: [classId], references: [id], onDelete: Cascade)
-  topicId     String
-  topic       Topic            @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  mode        AssignmentMode   @default(ONLINE)
-  isUnique    Boolean          @default(false)
-  targetIds   String[]
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id        String         @id @default(cuid())
+  lessonId  String?
+  lesson    Lesson?        @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  classId   String
+  class     Class          @relation(fields: [classId], references: [id], onDelete: Cascade)
+  topicId   String
+  topic     Topic          @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  mode      AssignmentMode @default(ONLINE)
+  isUnique  Boolean        @default(false)
+  targetIds String[]
+  dueDate   DateTime?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
 
   studentAssignments StudentAssignment[]
-  tasks                Task[]   @relation("AssignmentTasks")
+  tasks              Task[]              @relation("AssignmentTasks")
 
   @@index([classId])
   @@index([topicId])
 }
 
 model StudentAssignment {
-  id             String             @id @default(cuid())
-  studentId      String
-  student        Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  assignmentId   String
-  assignment     Assignment         @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  status         AssignmentStatus   @default(PENDING_VERIFICATION)
-  submission     Json?
-  createdAt    DateTime             @default(now())
-  updatedAt    DateTime             @updatedAt
+  id           String           @id @default(cuid())
+  studentId    String
+  student      Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  assignmentId String
+  assignment   Assignment       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  status       AssignmentStatus @default(PENDING_VERIFICATION)
+  submission   Json?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
 
   @@unique([studentId, assignmentId])
   @@index([assignmentId, status])
@@ -273,49 +279,49 @@ model TutorSession {
   createdAt DateTime @default(now())
 
   messages  TutorMessage[]
-  feedbacks Feedback[] @relation("SessionFeedback")
+  feedbacks Feedback[]     @relation("SessionFeedback")
 }
 
 model TutorMessage {
-  id        String   @id @default(cuid())
+  id        String       @id @default(cuid())
   sessionId String
   session   TutorSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   role      String
   content   String
   widget    Json?
-  createdAt DateTime @default(now())
+  createdAt DateTime     @default(now())
 
   @@index([sessionId, createdAt])
 }
 
 model Feedback {
-  id              String              @id @default(cuid())
-  userId          String
-  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  targetType      FeedbackTargetType
-  targetId        String
-  rating          Int
+  id                String             @id @default(cuid())
+  userId            String
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetType        FeedbackTargetType
+  targetId          String
+  rating            Int
   commentOrAudioUrl String?
-  createdAt       DateTime            @default(now())
+  createdAt         DateTime           @default(now())
 
-  lesson          Lesson?             @relation("LessonFeedback", fields: [targetId], references: [id], map: "Feedback_lesson_fkey")
-  session         TutorSession?       @relation("SessionFeedback", fields: [targetId], references: [id], map: "Feedback_session_fkey")
+  lesson  Lesson?       @relation("LessonFeedback", fields: [targetId], references: [id], map: "Feedback_lesson_fkey")
+  session TutorSession? @relation("SessionFeedback", fields: [targetId], references: [id], map: "Feedback_session_fkey")
 
   @@index([targetType, targetId])
 }
 
 model AiRecommendation {
-  id          String               @id @default(cuid())
-  teacherId   String
-  teacher     Teacher              @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  classId     String
-  class       Class                @relation(fields: [classId], references: [id], onDelete: Cascade)
-  type        RecommendationType
-  payload     Json
-  status      RecommendationStatus @default(PENDING)
-  reasoning   String?
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
+  id        String               @id @default(cuid())
+  teacherId String
+  teacher   Teacher              @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  classId   String
+  class     Class                @relation(fields: [classId], references: [id], onDelete: Cascade)
+  type      RecommendationType
+  payload   Json
+  status    RecommendationStatus @default(PENDING)
+  reasoning String?
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
 
   @@index([classId, status])
   @@index([teacherId, createdAt])
