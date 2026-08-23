@@ -7,6 +7,8 @@ import { TopicsModule } from './modules/topics/topics.module';
 import { StudentsModule } from './modules/students/students.module';
 import { AttemptsModule } from './modules/attempts/attempts.module';
 import { SubjectsModule } from './modules/subjects/subjects.module';
+import { ChatModule } from './modules/chat/chat.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -21,11 +23,13 @@ import { SubjectsModule } from './modules/subjects/subjects.module';
       },
     ]),
     PrismaModule,
+    AiModule,
     AuthModule,
     TopicsModule,
     StudentsModule,
     AttemptsModule,
     SubjectsModule,
+    ChatModule,
   ],
 })
 export class AppModule {}

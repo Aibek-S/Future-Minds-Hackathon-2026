@@ -266,14 +266,16 @@ model StudentAssignment {
 
 model TutorSession {
   id        String   @id @default(cuid())
-  studentId String
-  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentId String?
+  student   Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now())
 
   messages  TutorMessage[]
   feedbacks Feedback[] @relation("SessionFeedback")
+
+  @@index([userId, createdAt])
 }
 
 model TutorMessage {
