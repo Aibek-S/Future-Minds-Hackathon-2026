@@ -21,8 +21,8 @@ cd apps/web
 corepack pnpm dev
 ```
 
-- Backend: `http://localhost:3000/v1`
-- Swagger: `http://localhost:3000/api/docs`
+- Backend: `http://localhost:3002/v1` (порт из `PORT` в `apps/backend/.env`; дефолт 3002, т.к. 3000 часто занят)
+- Swagger: `http://localhost:3002/api/docs`
 - Test client: `http://localhost:3001`
 
 ## Demo accounts

@@ -3,7 +3,7 @@
 import { FormEvent, useState } from 'react';
 
 type User = { id: string; role: 'STUDENT' | 'TEACHER'; student?: { id: string } };
-const defaultApiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/v1';
+const defaultApiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3002/v1';
 
 export default function HomePage() {
   const [apiUrl, setApiUrl] = useState(defaultApiUrl);
