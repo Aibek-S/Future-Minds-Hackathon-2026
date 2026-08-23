@@ -1,12 +1,52 @@
 'use client';
 
 import { FormEvent, useEffect, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 
 type User = { id: string; role: 'STUDENT' | 'TEACHER'; student?: { id: string } };
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
 type SessionInfo = { id: string; createdAt: string; messageCount?: number };
 
 const defaultApiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3002/v1';
+
+/**
+ * LLMs emit math in many inconsistent styles: \(...\)/\[...\], $...$/$$...$$,
+ * bare [ ... ] / ( ... ), or even broken inline $ placement like \sin$-\alpha$.
+ * Strategy: line-by-line. If a line contains LaTeX commands and is not
+ * mostly Cyrillic prose, wrap the whole line in $$...$$ (display math).
+ * Already-wrapped lines ($..$ / $$..$$) are left untouched.
+ * Runs on the raw markdown string (regex on text, never on parsed HTML),
+ * so it stays XSS-safe.
+ */
+function normalizeMathDelimiters(markdown: string): string {
+  const hasMath = (s: string) =>
+    /\\[a-zA-Z]+|\^\{?[0-9a-zA-Z]|\_\{?[0-9a-zA-Z]|\{|\}|sqrt|frac|dfrac/.test(s);
+  const hasCyrillic = (s: string) => /[а-яА-ЯёЁ]/.test(s);
+  const isWrapped = (s: string) => {
+    const t = s.trim();
+    return /^\$\$[\s\S]*\$\$$/.test(t) || (/^\$[^$\n]*\$$/.test(t) && !t.includes('$$'));
+  };
+
+  // Convert LaTeX delimiters even inside prose lines.
+  const converted = markdown
+    .replace(/\\\[([\s\S]*?)\\\]/g, (_, inner: string) => `$$${inner}$$`)
+    .replace(/\\\(([\s\S]*?)\\\)/g, (_, inner: string) => `$${inner}$`);
+
+  return converted
+    .split('\n')
+    .map((line) => {
+      if (!line.trim() || !hasMath(line) || isWrapped(line) || hasCyrillic(line)) {
+        return line;
+      }
+      const cleaned = line.replace(/\$/g, '').replace(/^\s*\[/, '').replace(/\]\s*$/, '').trim();
+      return cleaned ? `$${cleaned}$$` : line;
+    })
+    .join('\n');
+}
 
 export default function ChatPage() {
   const [apiUrl, setApiUrl] = useState(defaultApiUrl);
@@ -224,7 +264,16 @@ export default function ChatPage() {
           {messages.length === 0 && <p className="muted">Задайте вопрос, например: «Объясни, как решать квадратные уравнения».</p>}
           {messages.map((message, index) => (
             <div key={index} className={`bubble ${message.role}`}>
-              {message.content}
+              {message.role === 'assistant' ? (
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm, [remarkMath, { singleDollarTextMath: false }]]}
+                  rehypePlugins={[[rehypeKatex, { throwOnError: false }]]}
+                >
+                  {normalizeMathDelimiters(message.content)}
+                </ReactMarkdown>
+              ) : (
+                message.content
+              )}
             </div>
           ))}
           {streaming && <div className="bubble assistant typing">…</div>}

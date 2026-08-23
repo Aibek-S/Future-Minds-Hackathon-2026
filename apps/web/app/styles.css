@@ -58,6 +58,16 @@ pre { margin: 0; overflow: auto; padding: 16px; background: #1f1f1f; color: #e8e
 .bubble.user { align-self: flex-end; background: #2b6cb0; color: #fff; border-bottom-right-radius: 2px; }
 .bubble.assistant { align-self: flex-start; background: #eee; color: #222; border-bottom-left-radius: 2px; }
 .bubble.typing { color: #888; }
+.bubble :is(h1, h2, h3, h4) { margin: 8px 0 4px; font-size: 1.05em; }
+.bubble :is(p, ul, ol, table) { margin: 4px 0; }
+.bubble ul, .bubble ol { padding-left: 20px; }
+.bubble code { background: rgba(0,0,0,.08); padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+.bubble pre { background: #1f1f1f; color: #e8e8e8; padding: 10px; border-radius: 6px; overflow: auto; margin: 6px 0; }
+.bubble pre code { background: none; padding: 0; color: inherit; }
+.bubble table { border-collapse: collapse; width: 100%; font-size: .92em; }
+.bubble th, .bubble td { border: 1px solid #bbb; padding: 4px 8px; text-align: left; }
+.bubble blockquote { margin: 6px 0; padding-left: 10px; border-left: 3px solid #bbb; color: #555; }
+.bubble a { color: #2b6cb0; }
 .session-list { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
 .session-item {
   justify-content: flex-start; text-align: left;
