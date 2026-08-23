@@ -6,6 +6,7 @@ export const AI_ENV = {
   maxRetriesFallback: 'AI_MAX_RETRIES_FALLBACK',
   timeoutMs: 'AI_TIMEOUT_MS',
   maxContextTokens: 'AI_MAX_CONTEXT_TOKENS',
+  maxWidgets: 'AI_MAX_WIDGETS',
   deepseekApiKey: 'DEEPSEEK_API_KEY',
   deepseekBaseUrl: 'DEEPSEEK_BASE_URL',
   openrouterApiKey: 'OPENROUTER_API_KEY',
@@ -26,6 +27,7 @@ export const DEFAULTS = {
   maxRetriesFallback: 1,
   timeoutMs: 30_000,
   maxContextTokens: 60_000,
+  maxWidgets: 3,
   deepseekBaseUrl: 'https://api.deepseek.com',
   openrouterBaseUrl: 'https://openrouter.ai/api/v1',
 } as const;

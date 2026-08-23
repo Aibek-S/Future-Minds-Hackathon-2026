@@ -1,7 +1,8 @@
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
+import { SessionKind } from '@prisma/client';
 import { AiWidget } from './widgets/ai-widgets.registry';
 
-export type AiTask = 'chat' | 'chat_with_profile';
+export type AiTask = SessionKind;
 
 export interface AiGenerateOptions {
   task: AiTask;
@@ -10,6 +11,8 @@ export interface AiGenerateOptions {
   stream?: boolean;
   /** Resolved from the authenticated user; used to scope tool execution. */
   studentId?: string;
+  classId?: string;
+  widgetLimit?: number;
 }
 
 export interface AiUsage {

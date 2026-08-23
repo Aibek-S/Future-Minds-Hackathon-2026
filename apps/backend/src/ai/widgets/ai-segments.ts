@@ -1,6 +1,5 @@
 import { Logger } from '@nestjs/common';
 import { AiWidget, isValidWidget, MAX_WIDGETS_PER_MESSAGE } from './ai-widgets.registry';
-
 export type AiSegment =
   | { kind: 'text'; text: string }
   | { kind: 'widget'; widget: AiWidget };
@@ -19,7 +18,7 @@ const logger = new Logger('AiSegments');
  * - If the whole reply is not valid segments JSON, returns a single text
  *   segment with the raw reply (plain chat keeps working).
  */
-export function parseSegments(reply: string): AiSegment[] {
+export function parseSegments(reply: string, maxWidgets = MAX_WIDGETS_PER_MESSAGE): AiSegment[] {
   const cleaned = extractJsonObject(reply);
   if (cleaned === null) {
     return [plainText(reply)];
@@ -45,7 +44,7 @@ export function parseSegments(reply: string): AiSegment[] {
         continue;
       }
       if (item.kind === 'widget' && isValidWidget(item.widget)) {
-        if (widgetCount >= MAX_WIDGETS_PER_MESSAGE) {
+        if (widgetCount >= maxWidgets) {
           logger.warn('Dropping widget: max per-message reached');
           continue;
         }

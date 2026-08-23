@@ -9,8 +9,9 @@ import { AiRouterService } from './ai.router';
 import { AiToolsService } from './tools/ai-tools.service';
 import { AiGenerateOptions, AiResult, AiStream, AiStreamChunk } from './ai.types';
 import { AI_ENV, DEFAULTS } from './ai.constants';
-import { CHAT_SYSTEM_PROMPT, CHAT_WITH_PROFILE_SYSTEM_PROMPT } from './prompts/chat.prompt';
+import { getTaskConfig } from './tasks';
 import { parseSegments } from './widgets/ai-segments';
+import { MAX_WIDGETS_PER_MESSAGE } from './widgets/ai-widgets.registry';
 
 interface ChainEntry {
   provider: AiProvider;
@@ -39,7 +40,7 @@ export class AiService {
 
   /** Non-streaming generation: runs the tool loop, returns final answer + usage. */
   async generate(options: AiGenerateOptions): Promise<AiResult> {
-    const { messages, tools, studentId } = this.prepare(options);
+    const { messages, tools, studentId, classId } = this.prepare(options);
     const chain = this.router.buildChain();
 
     if (chain.length === 0) {
@@ -47,13 +48,13 @@ export class AiService {
       return this.toResult(response.text, response.inputTokens, response.outputTokens, 'mock', 'mock');
     }
 
-    const response = await this.runWithTools(chain, messages, tools, studentId, false);
+    const response = await this.runWithTools(chain, messages, tools, { studentId, classId }, false);
     return this.toResult(response.text, response.inputTokens, response.outputTokens, this.lastModel, this.lastKind);
   }
 
   /** Streaming generation: streams final text, executes tools transparently. */
   async *generateStream(options: AiGenerateOptions): AiStream {
-    const { messages, tools, studentId } = this.prepare(options);
+    const { messages, tools, studentId, classId } = this.prepare(options);
     const chain = this.router.buildChain();
 
     if (chain.length === 0) {
@@ -61,20 +62,22 @@ export class AiService {
       return;
     }
 
-    const wantsSegments = this.taskWantsWidgets(options.task);
+    const taskConfig = getTaskConfig(options.task);
+    const wantsSegments = taskConfig.widgets;
 
     if (wantsSegments) {
       // Widget-bearing reply: buffer the full model text (tools executed
       // server-side), parse { segments: [...] }, then emit text/widget chunks
       // in strict order so each widget lands exactly where the model intended.
-      const response = await this.runWithTools(chain, messages, tools, studentId, false);
+      const response = await this.runWithTools(chain, messages, tools, { studentId, classId }, false);
       const usage = {
         inputTokens: response.inputTokens,
         outputTokens: response.outputTokens,
         model: this.lastModel,
         provider: this.lastKind,
       };
-      const segments = parseSegments(response.text);
+      const widgetLimit = options.widgetLimit ?? MAX_WIDGETS_PER_MESSAGE;
+      const segments = parseSegments(response.text, widgetLimit);
       for (const segment of segments) {
         if (segment.kind === 'text') {
           yield { type: 'text', text: segment.text };
@@ -103,7 +106,7 @@ export class AiService {
 
     const producer = (async () => {
       try {
-        const response = await this.runWithTools(chain, messages, tools, studentId, true, (chunk) => {
+        const response = await this.runWithTools(chain, messages, tools, { studentId, classId }, true, (chunk) => {
           if (chunk.type === 'text' && chunk.text) {
             push({ type: 'text', text: chunk.text });
           }
@@ -141,18 +144,18 @@ export class AiService {
 
   /**
    * Runs the provider chain, and if the model requests tool calls, executes
-   * them (scoped to the authenticated student) and feeds the results back
-   * into the conversation until the model produces a final text answer.
+   * them (scoped to the authenticated user/student/class) and feeds the
+   * results back into the conversation until a final text answer appears.
    */
   private async runWithTools(
     chain: ChainEntry[],
     initialMessages: ChatCompletionMessageParam[],
     tools: unknown[],
-    studentId: string | undefined,
+    context: { studentId?: string; classId?: string; userId?: string },
     stream: boolean,
     onChunk?: (chunk: AiProviderChunk) => void,
   ): Promise<AiProviderResponse> {
-    if (!tools.length || !studentId) {
+    if (!tools.length || !context.studentId && !context.classId) {
       return this.runChain(chain, initialMessages, tools, stream, onChunk);
     }
 
@@ -168,7 +171,7 @@ export class AiService {
         return response;
       }
 
-      const toolMessages = await this.executeToolCalls(calls, studentId);
+      const toolMessages = await this.executeToolCalls(calls, context);
       messages = [...messages, ...toolMessages];
     }
 
@@ -182,7 +185,10 @@ export class AiService {
     return aggregated;
   }
 
-  private async executeToolCalls(calls: ToolCall[], studentId: string): Promise<ChatCompletionMessageParam[]> {
+  private async executeToolCalls(
+    calls: ToolCall[],
+    context: { studentId?: string; classId?: string; userId?: string },
+  ): Promise<ChatCompletionMessageParam[]> {
     const messages: ChatCompletionMessageParam[] = [];
     for (const call of calls) {
       const name = call.function?.name ?? 'unknown';
@@ -194,7 +200,7 @@ export class AiService {
       }
       let result: string;
       try {
-        result = await this.tools.execute(name, parsed, { studentId });
+        result = await this.tools.execute(name, parsed, context);
       } catch (error) {
         result = JSON.stringify({ error: error instanceof Error ? error.message : 'Tool failed' });
       }
@@ -222,22 +228,12 @@ export class AiService {
       messages: [system, ...trimmed],
       tools: options.tools ?? [],
       studentId: options.studentId,
+      classId: options.classId,
     };
   }
 
   private systemPrompt(task: AiGenerateOptions['task']): string {
-    switch (task) {
-      case 'chat_with_profile':
-        return CHAT_WITH_PROFILE_SYSTEM_PROMPT;
-      case 'chat':
-        return CHAT_SYSTEM_PROMPT;
-      default:
-        return CHAT_SYSTEM_PROMPT;
-    }
-  }
-
-  private taskWantsWidgets(task: AiGenerateOptions['task']): boolean {
-    return task === 'chat_with_profile';
+    return getTaskConfig(task).prompt;
   }
 
   private maxContextTokens(): number {

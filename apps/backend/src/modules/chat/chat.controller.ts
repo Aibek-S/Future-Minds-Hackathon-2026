@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { SessionKind } from '@prisma/client';
 import { Response } from 'express';
 import { ChatService } from './chat.service';
 import { SendMessageDto } from './dto/send-message.dto';
@@ -10,21 +11,23 @@ import { SendMessageDto } from './dto/send-message.dto';
 @UseGuards(AuthGuard('jwt'))
 @Controller('chat')
 export class ChatController {
-  constructor(private readonly chatService: ChatService) {}
+  protected readonly kind: SessionKind = SessionKind.STUDENT_CHAT;
+
+  constructor(protected readonly chatService: ChatService) {}
 
   @Post('sessions')
   createSession(@Req() request: { user: { id: string; role: string } }) {
-    return this.chatService.createSession(request.user);
+    return this.chatService.createSession(request.user, this.kind);
   }
 
   @Get('sessions')
   listSessions(@Req() request: { user: { id: string; role: string } }) {
-    return this.chatService.listSessions(request.user);
+    return this.chatService.listSessions(request.user, this.kind);
   }
 
   @Get('sessions/:id')
   getSession(@Param('id') id: string, @Req() request: { user: { id: string; role: string } }) {
-    return this.chatService.getSession(id, request.user);
+    return this.chatService.getSession(id, request.user, this.kind);
   }
 
   /**
@@ -48,7 +51,7 @@ export class ChatController {
     const widgets: unknown[] = [];
 
     try {
-      const { stream } = await this.chatService.sendMessage(id, dto, request.user);
+      const { stream } = await this.chatService.sendMessage(id, dto, request.user, this.kind);
 
       for await (const chunk of stream) {
         switch (chunk.type) {
@@ -66,9 +69,6 @@ export class ChatController {
         }
       }
 
-      // Persist the last widget (a message carries at most one primary widget
-      // for simplicity of the chat UI); full multi-widget support can store
-      // the whole array if needed later.
       await this.chatService.saveAssistantMessage(id, assistantText, widgets[widgets.length - 1]);
       response.end();
     } catch (error) {
@@ -78,7 +78,7 @@ export class ChatController {
     }
   }
 
-  private writeEvent(response: Response, event: string, data: unknown) {
+  protected writeEvent(response: Response, event: string, data: unknown) {
     response.write(`event: ${event}\n`);
     response.write(`data: ${JSON.stringify(data)}\n\n`);
   }

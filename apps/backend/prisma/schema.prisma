@@ -49,6 +49,13 @@ enum FeedbackTargetType {
   TUTOR_SESSION
 }
 
+enum SessionKind {
+  STUDENT_CHAT
+  DIAGNOSTIC
+  FEEDBACK
+  ORCHESTRATOR
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -271,17 +278,18 @@ model StudentAssignment {
 }
 
 model TutorSession {
-  id        String   @id @default(cuid())
+  id        String      @id @default(cuid())
+  kind      SessionKind @default(STUDENT_CHAT)
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   studentId String?
-  student   Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
-  createdAt DateTime @default(now())
+  student   Student?    @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  createdAt DateTime    @default(now())
 
   messages  TutorMessage[]
   feedbacks Feedback[] @relation("SessionFeedback")
 
-  @@index([userId, createdAt])
+  @@index([kind, userId, createdAt])
 }
 
 model TutorMessage {

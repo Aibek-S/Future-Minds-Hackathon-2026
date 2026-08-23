@@ -149,7 +149,40 @@ function StepByStepWidget({ payload }: { payload: WidgetPayload }) {
   );
 }
 
-export type WidgetType = 'QUIZ' | 'MATH_EXPRESSION' | 'FORMULA_CARD' | 'STEP_BY_STEP';
+function ConfirmWidget({ payload }: { payload: WidgetPayload }) {
+  const title = String(payload.title ?? 'Подтверждение');
+  const text = String(payload.text ?? '');
+  const resourceType = String(payload.resourceType ?? '');
+  const [decision, setDecision] = useState<'accept' | 'reject' | null>(null);
+
+  return (
+    <div className="widget confirm">
+      <div className="widget-title">{title}</div>
+      <div className="widget-text">{text}</div>
+      {resourceType && <div className="widget-note">Тип: {resourceType}</div>}
+      <div className="widget-row">
+        <button
+          className="widget-confirm-accept"
+          disabled={decision !== null}
+          onClick={() => setDecision('accept')}
+        >
+          Принять
+        </button>
+        <button
+          className="widget-confirm-reject"
+          disabled={decision !== null}
+          onClick={() => setDecision('reject')}
+        >
+          Отклонить
+        </button>
+      </div>
+      {decision === 'accept' && <div className="widget-explanation ok">Принято. Рекомендация сохранена (создаётся урок).</div>}
+      {decision === 'reject' && <div className="widget-explanation bad">Отклонено. Рекомендация не будет применена.</div>}
+    </div>
+  );
+}
+
+export type WidgetType = 'QUIZ' | 'MATH_EXPRESSION' | 'FORMULA_CARD' | 'STEP_BY_STEP' | 'CONFIRM';
 
 export function WidgetRenderer({ type, payload }: { type: string; payload: WidgetPayload }) {
   switch (type) {
@@ -161,6 +194,8 @@ export function WidgetRenderer({ type, payload }: { type: string; payload: Widge
       return <FormulaCardWidget payload={payload} />;
     case 'STEP_BY_STEP':
       return <StepByStepWidget payload={payload} />;
+    case 'CONFIRM':
+      return <ConfirmWidget payload={payload} />;
     default:
       return null;
   }
@@ -198,6 +233,14 @@ export function WidgetExamples() {
             { title: 'Переносим свободный член', content: '3x = 18' },
             { title: 'Делим на коэффициент', content: 'x = 6' },
           ],
+        }}
+      />
+      <WidgetRenderer
+        type="CONFIRM"
+        payload={{
+          title: 'Предложение урока',
+          text: 'Повторить тему «Линейные уравнения» и дать 5 задач. Применить?',
+          resourceType: 'LESSON_PLAN',
         }}
       />
     </div>

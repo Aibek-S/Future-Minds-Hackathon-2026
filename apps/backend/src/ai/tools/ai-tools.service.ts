@@ -5,7 +5,9 @@ const COMPLETED_MASTERY = 0.8;
 const PREREQUISITE_MASTERY = 0.4;
 
 export interface ToolExecutionContext {
-  studentId: string;
+  studentId?: string;
+  classId?: string;
+  userId?: string;
 }
 
 @Injectable()
@@ -18,16 +20,77 @@ export class AiToolsService {
   async execute(name: string, args: Record<string, unknown>, context: ToolExecutionContext): Promise<string> {
     switch (name) {
       case 'get_knowledge_state':
-        return this.stringify(await this.getKnowledgeState(context.studentId, args.subjectId as string | undefined));
+        return this.stringify(
+          context.studentId
+            ? await this.getKnowledgeState(context.studentId, args.subjectId as string | undefined)
+            : { error: 'No student context' },
+        );
       case 'get_subject_summary':
-        return this.stringify(await this.getSubjectSummary(context.studentId));
+        return this.stringify(
+          context.studentId ? await this.getSubjectSummary(context.studentId) : { error: 'No student context' },
+        );
       case 'get_roadmap':
-        return this.stringify(await this.getRoadmap(context.studentId, args.subjectId as string | undefined));
+        return this.stringify(
+          context.studentId
+            ? await this.getRoadmap(context.studentId, args.subjectId as string | undefined)
+            : { error: 'No student context' },
+        );
       case 'update_student_profile':
-        return this.stringify(await this.updateStudentProfile(context.studentId, args));
+        return this.stringify(
+          context.studentId ? await this.updateStudentProfile(context.studentId, args) : { error: 'No student context' },
+        );
+      case 'get_class_overview':
+        return this.stringify(
+          context.classId ? await this.getClassOverview(context.classId) : { error: 'No class context' },
+        );
       default:
         return JSON.stringify({ error: `Unknown tool: ${name}` });
     }
+  }
+
+  private async getClassOverview(classId: string) {
+    const students = await this.prisma.student.findMany({
+      where: { classId },
+      include: {
+        user: { select: { name: true } },
+        knowledge: { include: { topic: { select: { id: true, name: true } } } },
+      },
+    });
+
+    const masteryByTopic = new Map<string, { name: string; values: number[] }>();
+    for (const student of students) {
+      for (const item of student.knowledge) {
+        const current = masteryByTopic.get(item.topicId) ?? { name: item.topic.name, values: [] };
+        current.values.push(item.mastery);
+        masteryByTopic.set(item.topicId, current);
+      }
+    }
+
+    const studentSummaries = students.map((student) => {
+      const values = student.knowledge.map((item) => item.mastery);
+      return {
+        studentId: student.id,
+        name: student.user.name,
+        overallMastery: values.length ? Number((values.reduce((s, v) => s + v, 0) / values.length).toFixed(3)) : 0,
+      };
+    });
+
+    const topics = [...masteryByTopic.entries()].map(([topicId, item]) => ({
+      topicId,
+      topicName: item.name,
+      avgMastery: Number((item.values.reduce((s, v) => s + v, 0) / item.values.length).toFixed(3)),
+    }));
+
+    return {
+      classId,
+      studentCount: students.length,
+      classMastery: studentSummaries.length
+        ? Number((studentSummaries.reduce((s, v) => s + v.overallMastery, 0) / studentSummaries.length).toFixed(3))
+        : 0,
+      weakTopics: topics.filter((topic) => topic.avgMastery < 0.4).sort((a, b) => a.avgMastery - b.avgMastery),
+      strongTopics: topics.filter((topic) => topic.avgMastery >= 0.7).sort((a, b) => b.avgMastery - a.avgMastery),
+      studentsAtRisk: studentSummaries.filter((student) => student.overallMastery < 0.4),
+    };
   }
 
   private async getKnowledgeState(studentId: string, subjectId?: string) {

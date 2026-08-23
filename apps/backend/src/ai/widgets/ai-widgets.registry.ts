@@ -1,4 +1,4 @@
-export type AiWidgetType = 'QUIZ' | 'MATH_EXPRESSION' | 'FORMULA_CARD' | 'STEP_BY_STEP';
+export type AiWidgetType = 'QUIZ' | 'MATH_EXPRESSION' | 'FORMULA_CARD' | 'STEP_BY_STEP' | 'CONFIRM';
 
 export interface AiWidget {
   type: AiWidgetType;
@@ -7,7 +7,13 @@ export interface AiWidget {
 
 export const MAX_WIDGETS_PER_MESSAGE = 3;
 
-export const WIDGET_NAMES: AiWidgetType[] = ['QUIZ', 'MATH_EXPRESSION', 'FORMULA_CARD', 'STEP_BY_STEP'];
+export const WIDGET_NAMES: AiWidgetType[] = [
+  'QUIZ',
+  'MATH_EXPRESSION',
+  'FORMULA_CARD',
+  'STEP_BY_STEP',
+  'CONFIRM',
+];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -60,6 +66,13 @@ function validateStepByStep(payload: unknown): boolean {
   );
 }
 
+function validateConfirm(payload: unknown): boolean {
+  if (!isRecord(payload)) {
+    return false;
+  }
+  return typeof payload.title === 'string' && typeof payload.text === 'string';
+}
+
 export function isValidWidget(widget: unknown): widget is AiWidget {
   if (!isRecord(widget) || !WIDGET_NAMES.includes(widget.type as AiWidgetType)) {
     return false;
@@ -73,6 +86,8 @@ export function isValidWidget(widget: unknown): widget is AiWidget {
       return validateFormulaCard(widget.payload);
     case 'STEP_BY_STEP':
       return validateStepByStep(widget.payload);
+    case 'CONFIRM':
+      return validateConfirm(widget.payload);
     default:
       return false;
   }

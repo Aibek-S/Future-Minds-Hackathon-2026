@@ -111,6 +111,13 @@ pre { margin: 0; overflow: auto; padding: 16px; background: #1f1f1f; color: #e8e
 .widget-examples { display: flex; flex-direction: column; gap: 14px; }
 .widget-examples h3 { margin: 0 0 2px; }
 
+.widget-wrap { display: flex; flex-direction: column; gap: 6px; }
+.widget-progress { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #777; }
+.widget-skip { min-height: 28px; padding: 0 10px; font-size: 12px; background: #666; }
+.widget.confirm .widget-text { font-size: 14px; line-height: 1.5; }
+.widget-confirm-accept { background: #2f9e44; }
+.widget-confirm-reject { background: #c92a2a; }
+
 @media (max-width: 640px) {
   .shell { padding-top: 32px; }
   .grid, .forms { grid-template-columns: 1fr; }

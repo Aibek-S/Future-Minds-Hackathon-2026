@@ -8,6 +8,7 @@ export const TOOL_GET_KNOWLEDGE_STATE = 'get_knowledge_state';
 export const TOOL_GET_SUBJECT_SUMMARY = 'get_subject_summary';
 export const TOOL_GET_ROADMAP = 'get_roadmap';
 export const TOOL_UPDATE_STUDENT_PROFILE = 'update_student_profile';
+export const TOOL_GET_CLASS_OVERVIEW = 'get_class_overview';
 
 /**
  * Function-calling tool schemas exposed to the LLM (OpenAI `tools` format).
@@ -88,6 +89,22 @@ export const AI_TOOL_DEFINITIONS: AiToolDefinition[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: TOOL_GET_CLASS_OVERVIEW,
+    description:
+      'Возвращает статистику класса учителя: средний mastery класса, сильные и слабые темы, список учеников в зоне риска (mastery < 0.4) с их общим mastery. Используется для планирования урока или рекомендаций по классу.',
+    parameters: {
+      type: 'object',
+      properties: {
+        classId: {
+          type: 'string',
+          description: 'ID класса.',
+        },
+      },
+      required: ['classId'],
+      additionalProperties: false,
+    },
+  },
 ];
 
 export const AI_TOOLS_BY_TASK: Record<string, string[]> = {
@@ -98,6 +115,7 @@ export const AI_TOOLS_BY_TASK: Record<string, string[]> = {
     TOOL_GET_ROADMAP,
     TOOL_UPDATE_STUDENT_PROFILE,
   ],
+  orchestrator: [TOOL_GET_CLASS_OVERVIEW],
 };
 
 /** Wraps our definitions into the OpenAI `tools` wire format. */
