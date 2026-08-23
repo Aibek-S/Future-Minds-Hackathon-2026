@@ -1,7 +1,7 @@
-import { Body, Controller, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { DiagnosticDto, UpdateStudentDto } from './dto/student.dto';
+import { DiagnosticDto, StudentSubjectQueryDto, UpdateStudentDto } from './dto/student.dto';
 import { StudentsService } from './students.service';
 
 @ApiTags('Students')
@@ -26,13 +26,21 @@ export class StudentsController {
   }
 
   @Get(':id/knowledge')
-  getKnowledge(@Param('id') id: string, @Req() request: { user: { id: string; role: string } }) {
-    return this.studentsService.getKnowledge(id, request.user);
+  getKnowledge(
+    @Param('id') id: string,
+    @Query() query: StudentSubjectQueryDto,
+    @Req() request: { user: { id: string; role: string } },
+  ) {
+    return this.studentsService.getKnowledge(id, request.user, query.subjectId);
   }
 
   @Get(':id/roadmap')
-  getRoadmap(@Param('id') id: string, @Req() request: { user: { id: string; role: string } }) {
-    return this.studentsService.getRoadmap(id, request.user);
+  getRoadmap(
+    @Param('id') id: string,
+    @Query() query: StudentSubjectQueryDto,
+    @Req() request: { user: { id: string; role: string } },
+  ) {
+    return this.studentsService.getRoadmap(id, request.user, query.subjectId);
   }
 
   @Post(':id/diagnostic')

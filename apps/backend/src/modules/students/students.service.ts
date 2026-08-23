@@ -56,9 +56,13 @@ export class StudentsService {
     }
   }
 
-  async getKnowledge(id: string, requester: { id: string; role: string }) {
+  async getKnowledge(id: string, requester: { id: string; role: string }, subjectId?: string) {
     await this.assertAccess(id, requester);
+    if (subjectId) {
+      await this.ensureSubject(subjectId);
+    }
     const topics = await this.prisma.topic.findMany({
+      where: subjectId ? { subjectId } : undefined,
       orderBy: { createdAt: 'asc' },
       include: {
         knowledge: { where: { studentId: id } },
@@ -141,9 +145,9 @@ export class StudentsService {
     };
   }
 
-  async getRoadmap(id: string, requester: { id: string; role: string }) {
+  async getRoadmap(id: string, requester: { id: string; role: string }, subjectId?: string) {
     await this.assertAccess(id, requester);
-    const knowledge = await this.getKnowledge(id, requester);
+    const knowledge = await this.getKnowledge(id, requester, subjectId);
     const completed = knowledge.topics.filter((topic) => topic.mastery >= COMPLETED_MASTERY).map((topic) => topic.topicName);
     const available = knowledge.topics.filter((topic) => topic.prerequisiteMet && topic.mastery < COMPLETED_MASTERY);
     const current = available[0] ?? null;
@@ -189,6 +193,13 @@ export class StudentsService {
       select: { mastery: true },
     });
     return knowledge?.mastery ?? 0;
+  }
+
+  private async ensureSubject(id: string) {
+    const subject = await this.prisma.subject.findUnique({ where: { id }, select: { id: true } });
+    if (!subject) {
+      throw new NotFoundException('Subject not found');
+    }
   }
 
   private arePrerequisitesMet(prerequisites: string[], topics: { id: string; knowledge: { mastery: number }[] }[]) {

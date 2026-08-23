@@ -92,3 +92,12 @@ export class DiagnosticDto {
   @Type(() => DiagnosticAnswerDto)
   answers: DiagnosticAnswerDto[];
 }
+
+export class StudentSubjectQueryDto {
+  @ApiPropertyOptional({ example: 'subject-id', description: 'Limits knowledge or roadmap to one subject' })
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  subjectId?: string;
+}

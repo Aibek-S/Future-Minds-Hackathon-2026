@@ -18,9 +18,9 @@ export class TopicsService {
   async createTopic(dto: CreateTopicDto) {
     await this.ensureSubject(dto.subjectId);
     if (dto.parentTopicId) {
-      await this.ensureTopic(dto.parentTopicId);
+      await this.ensureParentInSubject(dto.parentTopicId, dto.subjectId);
     }
-    await this.ensurePrerequisites(dto.prerequisites ?? []);
+    await this.ensurePrerequisites(dto.prerequisites ?? [], dto.subjectId);
     const topic = await this.prisma.topic.create({
       data: {
         name: dto.name,
@@ -33,11 +33,18 @@ export class TopicsService {
   }
 
   async updateTopic(id: string, dto: UpdateTopicDto) {
-    await this.ensureTopic(id);
+    const topic = await this.ensureTopic(id);
     if (dto.parentTopicId) {
-      await this.ensureTopic(dto.parentTopicId);
+      if (dto.parentTopicId === id) {
+        throw new BadRequestException('A topic cannot be its own parent');
+      }
+      await this.ensureParentInSubject(dto.parentTopicId, topic.subjectId);
+      await this.assertNoParentCycle(id, dto.parentTopicId);
     }
-    await this.ensurePrerequisites(dto.prerequisites ?? []);
+    if (dto.prerequisites !== undefined) {
+      await this.ensurePrerequisites(dto.prerequisites, topic.subjectId);
+      await this.assertNoPrerequisiteCycle(id, dto.prerequisites);
+    }
     return this.prisma.topic.update({
       where: { id },
       data: dto,
@@ -46,6 +53,15 @@ export class TopicsService {
 
   async deleteTopic(id: string) {
     await this.ensureTopic(id);
+    const dependents = await this.prisma.topic.findMany({
+      where: { prerequisites: { has: id } },
+      select: { id: true, name: true },
+    });
+    if (dependents.length) {
+      throw new BadRequestException(
+        `Cannot delete topic used as a prerequisite: ${dependents.map((topic) => topic.name).join(', ')}`,
+      );
+    }
     await this.prisma.topic.delete({ where: { id } });
     return { id, deleted: true };
   }
@@ -93,7 +109,7 @@ export class TopicsService {
   }
 
   private async ensureTopic(id: string) {
-    const topic = await this.prisma.topic.findUnique({ where: { id }, select: { id: true } });
+    const topic = await this.prisma.topic.findUnique({ where: { id }, select: { id: true, subjectId: true } });
     if (!topic) {
       throw new NotFoundException('Topic not found');
     }
@@ -107,13 +123,64 @@ export class TopicsService {
     }
   }
 
-  private async ensurePrerequisites(ids: string[]) {
+  private async ensureParentInSubject(parentTopicId: string, subjectId: string) {
+    const parent = await this.ensureTopic(parentTopicId);
+    if (parent.subjectId !== subjectId) {
+      throw new BadRequestException('Parent topic must belong to the same subject');
+    }
+  }
+
+  private async ensurePrerequisites(ids: string[], subjectId: string) {
     if (!ids.length) {
       return;
     }
-    const count = await this.prisma.topic.count({ where: { id: { in: ids } } });
+    if (new Set(ids).size !== ids.length) {
+      throw new BadRequestException('Prerequisites must be unique');
+    }
+    const count = await this.prisma.topic.count({ where: { id: { in: ids }, subjectId } });
     if (count !== ids.length) {
-      throw new NotFoundException('Prerequisite topic not found');
+      throw new BadRequestException('Prerequisites must belong to the same subject');
+    }
+  }
+
+  private async assertNoParentCycle(topicId: string, parentTopicId: string) {
+    const visited = new Set<string>();
+    let currentId: string | null = parentTopicId;
+
+    while (currentId) {
+      if (currentId === topicId) {
+        throw new BadRequestException('Parent topic creates a cycle');
+      }
+      if (visited.has(currentId)) {
+        throw new BadRequestException('Topic hierarchy already contains a cycle');
+      }
+      visited.add(currentId);
+      const current: { parentTopicId: string | null } | null = await this.prisma.topic.findUnique({
+        where: { id: currentId },
+        select: { parentTopicId: true },
+      });
+      currentId = current?.parentTopicId ?? null;
+    }
+  }
+
+  private async assertNoPrerequisiteCycle(topicId: string, prerequisiteIds: string[]) {
+    const visited = new Set<string>();
+    const pending = [...prerequisiteIds];
+
+    while (pending.length) {
+      const currentId = pending.pop()!;
+      if (currentId === topicId) {
+        throw new BadRequestException('Prerequisites create a cycle');
+      }
+      if (visited.has(currentId)) {
+        continue;
+      }
+      visited.add(currentId);
+      const current = await this.prisma.topic.findUnique({
+        where: { id: currentId },
+        select: { prerequisites: true },
+      });
+      pending.push(...(current?.prerequisites ?? []));
     }
   }
 }

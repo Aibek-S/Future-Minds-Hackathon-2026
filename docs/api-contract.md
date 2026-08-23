@@ -145,7 +145,8 @@ Content-Type: application/json (кроме multipart для voice)
 }
 ```
 
-### `GET /students/:id/knowledge` — текущее мастерство по темам
+### `GET /students/:id/knowledge?subjectId=:subjectId` — текущее мастерство по темам
+`subjectId` — необязательный параметр. При передаче ответ содержит темы только указанного предмета; без него возвращаются темы всех предметов.
 ```json
 // Response 200
 {
@@ -164,7 +165,8 @@ Content-Type: application/json (кроме multipart для voice)
 }
 ```
 
-### `GET /students/:id/roadmap` — адаптивный роадмап
+### `GET /students/:id/roadmap?subjectId=:subjectId` — адаптивный роадмап
+`subjectId` — необязательный параметр. При передаче roadmap и progress целей рассчитываются только по темам указанного предмета.
 ```json
 // Response 200
 {
