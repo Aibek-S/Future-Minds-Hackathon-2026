@@ -389,6 +389,25 @@ curl -X POST /v1/voice-feedback \
 // Response 200 — { "classId": "c_1", "message": "Joined successfully" }
 ```
 
+`id` и `code` должны относиться к одному классу. Ученик определяется по JWT; при успешном входе
+его `student.classId` заменяется на идентификатор класса.
+
+### `DELETE /classes/:id/students/:sid` — исключить ученика
+```json
+// Response 200
+{ "studentId": "s_1", "classId": null, "message": "Student removed from class" }
+```
+
+Доступен только владельцу класса (или ADMIN). Прогресс и история попыток ученика сохраняются.
+
+### `DELETE /classes/:id` — удалить класс
+```json
+// Response 200
+{ "id": "c_1", "message": "Class deleted; students switched to autonomous mode" }
+```
+
+Перед удалением всем ученикам класса устанавливается `classId: null`.
+
 ### `GET /classes/:id/overview` — дашборд класса
 ```json
 // Response 200
