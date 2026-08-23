@@ -454,12 +454,24 @@ curl -X POST /v1/voice-feedback \
   "classMastery": 0.64,
   "strongTopics": [{ "topicId": "top_1", "topicName": "Functions", "mastery": 0.81 }],
   "weakTopics": [{ "topicId": "top_2", "topicName": "Chain Rule", "mastery": 0.43 }],
-  "studentsNeedingRemediation": 12,
-  "heatmap": [                    // Ученики × Темы
-    { "studentId": "s_1", "studentName": "Алтаир", "topics": { "top_1": 0.81, "top_2": 0.41 } }
-  ]
+  "studentsNeedingRemediation": 12
 }
 ```
+
+### `GET /classes/:id/heatmap` — матрица «Ученики × Темы»
+```json
+// Response 200
+{
+  "topics": [{ "id": "top_1", "name": "Functions" }],
+  "students": [{
+    "studentId": "s_1",
+    "studentName": "Алтаир",
+    "topics": [{ "topicId": "top_1", "mastery": 0.81, "status": "GREEN" }]
+  }]
+}
+```
+
+`GREEN` — mastery ≥ 0.7, `YELLOW` — 0.4–0.699, `RED` — < 0.4.
 
 ### `GET /classes/:id/students` — список учеников
 ```json
@@ -482,8 +494,18 @@ curl -X POST /v1/voice-feedback \
   "weakTopics": ["Chain Rule", "Word Problems"],
   "recentMistakes": [
     { "topicId": "top_2", "type": "CALCULATION_ERROR", "count": 3 }
-  ],
-  "voiceFeedbackAlerts": 2
+  ]
+}
+```
+
+### `GET /classes/:id/students/:sid/attempts` — история попыток ученика
+```json
+// Response 200
+{
+  "attempts": [{
+    "id": "att_1", "taskId": "t_1", "topicId": "top_2", "topicName": "Chain Rule",
+    "answer": "...", "correct": false, "attemptNumber": 2, "createdAt": "2026-08-20T10:00:00Z"
+  }]
 }
 ```
 
