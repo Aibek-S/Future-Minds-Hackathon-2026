@@ -9,6 +9,12 @@ import { AttemptsModule } from './modules/attempts/attempts.module';
 import { SubjectsModule } from './modules/subjects/subjects.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { AiModule } from './ai/ai.module';
+import { ClassesModule } from './modules/classes/classes.module';
+import { LessonsModule } from './modules/lessons/lessons.module';
+import { AssignmentsModule } from './modules/assignments/assignments.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { OrchestratorModule } from './modules/orchestrator/orchestrator.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -30,6 +36,12 @@ import { AiModule } from './ai/ai.module';
     AttemptsModule,
     SubjectsModule,
     ChatModule,
+    ClassesModule,
+    LessonsModule,
+    AssignmentsModule,
+    DashboardModule,
+    OrchestratorModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

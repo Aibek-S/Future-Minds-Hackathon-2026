@@ -317,16 +317,27 @@ async function main() {
       preferences: { language: 'ru' },
     },
   });
-  await prisma.teacher.upsert({
+  const teacher = await prisma.teacher.upsert({
     where: { userId: teacherUser.id },
     update: {},
     create: { userId: teacherUser.id },
   });
 
+  const demoClass = await prisma.class.upsert({
+    where: { code: 'DEMO9A' },
+    update: { name: 'Demo 9A', grade: 9, teacherId: teacher.id },
+    create: { code: 'DEMO9A', name: 'Demo 9A', grade: 9, teacherId: teacher.id },
+  });
+
+  await prisma.student.update({
+    where: { userId: studentUser.id },
+    data: { classId: demoClass.id },
+  });
+
   await seedSubject('Алгебра, 9 класс', algebraTopicSeeds);
   await seedSubject('Геометрия, 9 класс', geometryTopicSeeds);
 
-  console.info('Seed complete: 2 subjects, 16 topics and 80 tasks');
+  console.info('Seed complete: demo class, 2 subjects, 16 topics and 80 tasks');
 }
 
 main()
