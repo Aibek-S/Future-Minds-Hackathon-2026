@@ -426,6 +426,10 @@ curl -X POST /v1/voice-feedback \
 }
 ```
 
+`planJson` обязателен и валидируется по этой структуре: непустые массивы `objectives` и
+`practice`; непустые строки `warmup`, `explanation`, `assessment`, `homework`; объект
+`differentiatedTasks` с непустыми массивами `weak` и `strong`.
+
 ### `GET /classes/:id/lessons?from=&to=` — календарь уроков
 
 Возвращает уроки класса в указанном диапазоне дат, тему и количество связанных заданий/отзывов.

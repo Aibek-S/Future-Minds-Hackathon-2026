@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateString, IsInt, IsObject, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsDateString, IsInt, IsObject, IsOptional, IsString, Max, Min, Validate } from 'class-validator';
+import { LessonPlanValidator } from './lesson-plan.validator';
 
 export class CreateLessonDto {
   @ApiProperty({ example: '2026-09-01T09:00:00.000Z' })
@@ -22,6 +23,7 @@ export class CreateLessonDto {
     },
   })
   @IsObject()
+  @Validate(LessonPlanValidator)
   planJson: Record<string, unknown>;
 }
 
@@ -39,6 +41,7 @@ export class UpdateLessonDto {
   @ApiPropertyOptional({ type: Object })
   @IsOptional()
   @IsObject()
+  @Validate(LessonPlanValidator)
   planJson?: Record<string, unknown>;
 }
 
