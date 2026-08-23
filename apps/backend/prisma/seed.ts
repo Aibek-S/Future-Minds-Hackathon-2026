@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 
 const prisma = new PrismaClient();
 const DEMO_PASSWORD = 'password123';
+const EMBEDDING_DIMENSIONS = 1536;
 
 const algebraTopicSeeds = [
   {
@@ -255,7 +256,7 @@ async function seedSubject(
 async function upsertMaterial(topicId: string, content: string) {
   const metadata = { source: 'seed', language: 'ru', type: 'lesson-notes' };
   const existing = await prisma.materialVector.findFirst({ where: { topicId } });
-  const embedding = `[${Array(1536).fill(0).join(',')}]`;
+  const embedding = toPgVector(createMockEmbedding(content));
   if (existing) {
     await prisma.$executeRaw`
       UPDATE "MaterialVector"
@@ -268,6 +269,30 @@ async function upsertMaterial(topicId: string, content: string) {
       VALUES (${randomUUID()}, ${topicId}, ${content}, ${JSON.stringify(metadata)}::jsonb, ${embedding}::vector)
     `;
   }
+}
+
+/**
+ * Temporary deterministic embedding for the demo seed.
+ *
+ * It is normalized and non-zero, so pgvector cosine operators and the IVFFlat
+ * index work before a real embedding provider is connected. It is not intended
+ * to provide semantic search quality.
+ */
+function createMockEmbedding(content: string): number[] {
+  const vector = Array<number>(EMBEDDING_DIMENSIONS).fill(0);
+
+  for (let index = 0; index < content.length; index += 1) {
+    const code = content.charCodeAt(index);
+    const bucket = (code * 31 + index * 17) % EMBEDDING_DIMENSIONS;
+    vector[bucket] += 1;
+  }
+
+  const norm = Math.hypot(...vector);
+  return vector.map((value) => value / norm);
+}
+
+function toPgVector(vector: number[]) {
+  return `[${vector.join(',')}]`;
 }
 
 async function main() {
