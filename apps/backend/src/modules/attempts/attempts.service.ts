@@ -1,7 +1,8 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { MistakeType, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateAttemptDto } from './dto/attempt.dto';
+import { MockAnswerCheckerService } from './mock-answer-checker.service';
 
 const COMPLETED_MASTERY = 0.8;
 const DIFFICULTIES = ['easy', 'medium', 'hard'] as const;
@@ -10,7 +11,10 @@ type Requester = { id: string; role: string };
 
 @Injectable()
 export class AttemptsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly answerChecker: MockAnswerCheckerService,
+  ) {}
 
   async create(taskId: string, studentId: string, dto: CreateAttemptDto, requester: Requester) {
     await this.assertStudentAccess(studentId, requester);
@@ -22,56 +26,60 @@ export class AttemptsService {
       throw new NotFoundException('Task not found');
     }
 
-    const correct = this.mockCheck(dto.answer);
-    const result = await this.prisma.$transaction(async (transaction) => {
+    const answerCheck = this.answerChecker.evaluate(dto.answer);
+    const result = await this.runSerializable(() => this.prisma.$transaction(async (transaction) => {
       const attemptNumber = (await transaction.attempt.count({ where: { taskId, studentId } })) + 1;
       const previous = await transaction.studentKnowledge.findUnique({
         where: { studentId_topicId: { studentId, topicId: task.topicId } },
         select: { mastery: true, attempts: true, correctAttempts: true },
       });
       const masteryBefore = previous?.mastery ?? 0;
-      const currentResult = correct ? (attemptNumber === 1 ? 1 : attemptNumber === 2 ? 0.5 : 0.1) : 0;
-      const masteryAfter = Number((0.7 * masteryBefore + 0.3 * currentResult).toFixed(3));
+      const currentResult = answerCheck.correct ? (attemptNumber === 1 ? 1 : attemptNumber === 2 ? 0.5 : 0.1) : 0;
+      const masteryAfter = 0.7 * masteryBefore + 0.3 * currentResult;
 
-      const attempt = await transaction.attempt.create({
-        data: { taskId, studentId, answer: dto.answer, attemptNumber, correct },
+      await transaction.attempt.create({
+        data: { taskId, studentId, answer: dto.answer, attemptNumber, correct: answerCheck.correct },
       });
       await transaction.studentKnowledge.upsert({
         where: { studentId_topicId: { studentId, topicId: task.topicId } },
         update: {
           mastery: masteryAfter,
           attempts: { increment: 1 },
-          correctAttempts: { increment: correct ? 1 : 0 },
+          correctAttempts: { increment: answerCheck.correct ? 1 : 0 },
         },
         create: {
           studentId,
           topicId: task.topicId,
           mastery: masteryAfter,
           attempts: 1,
-          correctAttempts: correct ? 1 : 0,
+          correctAttempts: answerCheck.correct ? 1 : 0,
         },
       });
 
-      const mistakeType = correct ? null : this.classifyMistake(dto.answer);
-      if (mistakeType) {
-        await transaction.mistake.create({ data: { studentId, topicId: task.topicId, type: mistakeType } });
+      if (answerCheck.mistakeType) {
+        await transaction.mistake.create({
+          data: { studentId, topicId: task.topicId, type: answerCheck.mistakeType },
+        });
       }
 
       return {
-        attempt,
         masteryBefore,
         masteryAfter,
         attempts: (previous?.attempts ?? 0) + 1,
-        correctAttempts: (previous?.correctAttempts ?? 0) + (correct ? 1 : 0),
-        mistakeType,
+        correctAttempts: (previous?.correctAttempts ?? 0) + (answerCheck.correct ? 1 : 0),
       };
-    });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
 
-    const unlockedTopics = await this.getUnlockedTopics(studentId, task.topicId);
+    const unlockedTopics = await this.getNewlyUnlockedTopics(
+      studentId,
+      task.topicId,
+      result.masteryBefore,
+      result.masteryAfter,
+    );
     return {
-      correct,
-      feedback: correct ? 'Верно! Ответ принят в demo-режиме.' : 'Ответ отмечен как ошибка. Попробуй разобрать шаги решения.',
-      mistakeType: result.mistakeType,
+      correct: answerCheck.correct,
+      feedback: answerCheck.feedback,
+      mistakeType: answerCheck.mistakeType,
       updatedMastery: {
         topicId: task.topicId,
         masteryBefore: result.masteryBefore,
@@ -82,21 +90,6 @@ export class AttemptsService {
       nextTaskDifficulty: this.getNextDifficulty(task.difficulty, result.masteryAfter),
       prerequisiteUnlocked: unlockedTopics,
     };
-  }
-
-  private mockCheck(answer: string) {
-    return /^(correct|правильно)$/i.test(answer.trim());
-  }
-
-  private classifyMistake(answer: string): MistakeType {
-    const normalized = answer.trim().toLowerCase();
-    if (!normalized || /не знаю|не понял|услови|dont know|don't know|unknown/.test(normalized)) {
-      return MistakeType.READING_ERROR;
-    }
-    if (/формул|теорем|правил|понят/.test(normalized)) {
-      return MistakeType.CONCEPTUAL_ERROR;
-    }
-    return MistakeType.CALCULATION_ERROR;
   }
 
   private getNextDifficulty(difficulty: string, mastery: number) {
@@ -110,7 +103,15 @@ export class AttemptsService {
     return DIFFICULTIES[index] ?? 'medium';
   }
 
-  private async getUnlockedTopics(studentId: string, completedTopicId: string) {
+  private async getNewlyUnlockedTopics(
+    studentId: string,
+    completedTopicId: string,
+    masteryBefore: number,
+    masteryAfter: number,
+  ) {
+    if (masteryBefore >= COMPLETED_MASTERY || masteryAfter < COMPLETED_MASTERY) {
+      return [];
+    }
     const topics = await this.prisma.topic.findMany({
       where: { prerequisites: { has: completedTopicId } },
       select: { id: true, name: true, prerequisites: true },
@@ -120,6 +121,23 @@ export class AttemptsService {
     return topics
       .filter((topic) => topic.prerequisites.every((id) => (masteryByTopic.get(id) ?? 0) >= COMPLETED_MASTERY))
       .map((topic) => ({ topicId: topic.id, topicName: topic.name }));
+  }
+
+  private async runSerializable<T>(operation: () => Promise<T>): Promise<T> {
+    const maxAttempts = 3;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        return await operation();
+      } catch (error) {
+        const isWriteConflict = error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034';
+        if (!isWriteConflict || attempt === maxAttempts) {
+          throw error;
+        }
+      }
+    }
+
+    throw new Error('Unreachable serializable transaction state');
   }
 
   private async assertStudentAccess(studentId: string, requester: Requester) {
