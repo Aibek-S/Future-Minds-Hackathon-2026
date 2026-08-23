@@ -643,6 +643,16 @@ OFFLINE переводится в `PENDING_VERIFICATION` только после
 
 ---
 
+### `GET /notifications/stream` — realtime уведомления ученика
+
+SSE-поток с Bearer JWT. При `REJECT` offline-ДЗ ученик получает событие:
+```json
+{
+  "type": "ASSIGNMENT_REVISION_REQUIRED",
+  "payload": { "studentAssignmentId": "sa_1", "comment": "Нужно перерешать" }
+}
+```
+
 ## 12. WebSocket Events (Real-time)
 
 **Подключение:** `wss://api.domain/v1/realtime?token=<jwt>`

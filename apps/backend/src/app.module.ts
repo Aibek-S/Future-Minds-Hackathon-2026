@@ -12,6 +12,7 @@ import { LessonsModule } from './modules/lessons/lessons.module';
 import { AssignmentsModule } from './modules/assignments/assignments.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { OrchestratorModule } from './modules/orchestrator/orchestrator.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { OrchestratorModule } from './modules/orchestrator/orchestrator.module';
     AssignmentsModule,
     DashboardModule,
     OrchestratorModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

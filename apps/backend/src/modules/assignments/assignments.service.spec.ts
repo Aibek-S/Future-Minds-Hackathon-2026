@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { AssignmentMode, AssignmentStatus } from '@prisma/client';
 import { AnswerCheckerService } from '../attempts/answer-checker.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { AssignmentsService } from './assignments.service';
 
 describe('AssignmentsService', () => {
@@ -16,6 +17,7 @@ describe('AssignmentsService', () => {
     studentAssignment: { findUnique: jest.Mock; update: jest.Mock };
   };
   let answerChecker: { evaluate: jest.Mock };
+  let notifications: { notifyAssignmentRevision: jest.Mock };
   let service: AssignmentsService;
 
   const teacher = { id: 'teacher-user', role: 'TEACHER' };
@@ -32,9 +34,11 @@ describe('AssignmentsService', () => {
       studentAssignment: { findUnique: jest.fn(), update: jest.fn() },
     };
     answerChecker = { evaluate: jest.fn().mockReturnValue({ correct: true, feedback: 'Correct', mistakeType: null }) };
+    notifications = { notifyAssignmentRevision: jest.fn() };
     service = new AssignmentsService(
       prisma as unknown as PrismaService,
       answerChecker as unknown as AnswerCheckerService,
+      notifications as unknown as NotificationsService,
     );
   });
 
@@ -119,5 +123,19 @@ describe('AssignmentsService', () => {
 
     await expect(service.submit('sa-1', { submittedInClass: true }, { id: 'other-student', role: 'STUDENT' }))
       .rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('notifies the student when a teacher requests an offline revision', async () => {
+    prisma.studentAssignment.findUnique.mockResolvedValue({
+      id: 'sa-1', status: AssignmentStatus.PENDING_VERIFICATION, submission: { submittedInClass: true },
+      student: { userId: 'student-user' }, assignment: { mode: AssignmentMode.OFFLINE, class: { teacherId: 'teacher-1' } },
+    });
+    prisma.studentAssignment.update.mockResolvedValue({ id: 'sa-1', status: AssignmentStatus.REVISION_REQUIRED });
+
+    await service.verify('sa-1', { action: 'REJECT', comment: 'Please revise task 2.' }, teacher);
+
+    expect(notifications.notifyAssignmentRevision).toHaveBeenCalledWith('student-user', {
+      studentAssignmentId: 'sa-1', comment: 'Please revise task 2.',
+    });
   });
 });

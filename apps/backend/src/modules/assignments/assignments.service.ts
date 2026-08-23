@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { AssignmentMode, AssignmentStatus, Prisma } from '@prisma/client';
 import { AnswerCheckerService } from '../attempts/answer-checker.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateAssignmentDto, SubmitAssignmentDto, VerifyAssignmentDto } from './dto/assignment.dto';
 
 type Requester = { id: string; role: string };
@@ -11,6 +12,7 @@ export class AssignmentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly answerChecker: AnswerCheckerService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async create(classId: string, dto: CreateAssignmentDto, requester: Requester) {
@@ -131,7 +133,10 @@ export class AssignmentsService {
   async verify(studentAssignmentId: string, dto: VerifyAssignmentDto, requester: Requester) {
     const studentAssignment = await this.prisma.studentAssignment.findUnique({
       where: { id: studentAssignmentId },
-      include: { assignment: { include: { class: { select: { teacherId: true } } } } },
+      include: {
+        student: { select: { userId: true } },
+        assignment: { include: { class: { select: { teacherId: true } } } },
+      },
     });
     if (!studentAssignment) {
       throw new NotFoundException('Student assignment not found');
@@ -152,10 +157,17 @@ export class AssignmentsService {
 
     const submission = this.addVerificationComment(studentAssignment.submission, dto.action === 'REJECT' ? dto.comment!.trim() : undefined);
     const status = dto.action === 'APPROVE' ? AssignmentStatus.TEACHER_VERIFIED : AssignmentStatus.REVISION_REQUIRED;
-    return this.prisma.studentAssignment.update({
+    const updated = await this.prisma.studentAssignment.update({
       where: { id: studentAssignmentId },
       data: { status, submission },
     });
+    if (dto.action === 'REJECT') {
+      this.notificationsService.notifyAssignmentRevision(studentAssignment.student.userId, {
+        studentAssignmentId,
+        comment: dto.comment!.trim(),
+      });
+    }
+    return updated;
   }
 
   private async assertClassOwner(classId: string, requester: Requester) {
