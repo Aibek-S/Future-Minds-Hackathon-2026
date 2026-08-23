@@ -15,7 +15,7 @@ Prisma schema уже содержит основу для Students, Topics/Tasks
 
 | Контракт | Текущее состояние | Решение |
 |---|---|---|
-| `POST /tasks/:id/attempts` сам определяет `correct` по `answer` | У `Task` нет эталонного ответа | Добавить `correctAnswer String?` в `Task`; seed будет заполнять его для demo-задач. |
+| `POST /tasks/:id/attempts` сам определяет `correct` по `answer` | У `Task` нет эталонного ответа | ✅ Решено: добавлен `correctAnswer String?`; seed заполняет его для всех 80 задач; проверка нормализованная, demo-ключи — фоллбек. |
 | `GET /auth/me` возвращает пользователя и вложенный Student/Teacher | JWT strategy возвращает только `{ userId, role }` | Исправить AuthService/AuthController без изменения schema. |
 | Регистрация принимает `phone` | `User.phone` есть, но поля нет в DTO и сервисе | Добавить необязательный `phone` в RegisterDto и запись в `User`. |
 | `grade` обязателен для STUDENT | DTO допускает отсутствие и сервис подставляет 9 | Добавить условную валидацию grade для STUDENT. |

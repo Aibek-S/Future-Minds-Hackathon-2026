@@ -4,6 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { DiagnosticDto, UpdateStudentDto } from './dto/student.dto';
 
 const COMPLETED_MASTERY = 0.8;
+const PREREQUISITE_MASTERY = 0.4;
 
 @Injectable()
 export class StudentsService {
@@ -205,7 +206,7 @@ export class StudentsService {
   private arePrerequisitesMet(prerequisites: string[], topics: { id: string; knowledge: { mastery: number }[] }[]) {
     return prerequisites.every((prerequisiteId) => {
       const prerequisite = topics.find((topic) => topic.id === prerequisiteId);
-      return (prerequisite?.knowledge[0]?.mastery ?? 0) >= COMPLETED_MASTERY;
+      return (prerequisite?.knowledge[0]?.mastery ?? 0) > PREREQUISITE_MASTERY;
     });
   }
 

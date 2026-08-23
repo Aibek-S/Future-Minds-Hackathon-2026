@@ -2,9 +2,9 @@ import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/commo
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateAttemptDto } from './dto/attempt.dto';
-import { MockAnswerCheckerService } from './mock-answer-checker.service';
+import { AnswerCheckerService } from './answer-checker.service';
 
-const COMPLETED_MASTERY = 0.8;
+const PREREQUISITE_MASTERY = 0.4;
 const DIFFICULTIES = ['easy', 'medium', 'hard'] as const;
 
 type Requester = { id: string; role: string };
@@ -13,20 +13,20 @@ type Requester = { id: string; role: string };
 export class AttemptsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly answerChecker: MockAnswerCheckerService,
+    private readonly answerChecker: AnswerCheckerService,
   ) {}
 
   async create(taskId: string, studentId: string, dto: CreateAttemptDto, requester: Requester) {
     await this.assertStudentAccess(studentId, requester);
     const task = await this.prisma.task.findUnique({
       where: { id: taskId },
-      select: { id: true, topicId: true, difficulty: true },
+      select: { id: true, topicId: true, difficulty: true, correctAnswer: true },
     });
     if (!task) {
       throw new NotFoundException('Task not found');
     }
 
-    const answerCheck = this.answerChecker.evaluate(dto.answer);
+    const answerCheck = this.answerChecker.evaluate(dto.answer, task.correctAnswer);
     const result = await this.runSerializable(() => this.prisma.$transaction(async (transaction) => {
       const attemptNumber = (await transaction.attempt.count({ where: { taskId, studentId } })) + 1;
       const previous = await transaction.studentKnowledge.findUnique({
@@ -109,7 +109,7 @@ export class AttemptsService {
     masteryBefore: number,
     masteryAfter: number,
   ) {
-    if (masteryBefore >= COMPLETED_MASTERY || masteryAfter < COMPLETED_MASTERY) {
+    if (masteryBefore > PREREQUISITE_MASTERY || masteryAfter <= PREREQUISITE_MASTERY) {
       return [];
     }
     const topics = await this.prisma.topic.findMany({
@@ -119,7 +119,7 @@ export class AttemptsService {
     const knowledge = await this.prisma.studentKnowledge.findMany({ where: { studentId } });
     const masteryByTopic = new Map(knowledge.map((item) => [item.topicId, item.mastery]));
     return topics
-      .filter((topic) => topic.prerequisites.every((id) => (masteryByTopic.get(id) ?? 0) >= COMPLETED_MASTERY))
+      .filter((topic) => topic.prerequisites.every((id) => (masteryByTopic.get(id) ?? 0) > PREREQUISITE_MASTERY))
       .map((topic) => ({ topicId: topic.id, topicName: topic.name }));
   }
 

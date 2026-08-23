@@ -15,6 +15,12 @@ export class CreateTaskDto {
   @MaxLength(2000)
   content: string;
 
+  @ApiPropertyOptional({ example: 'x = 3', description: 'Reference answer(s), separated by | for alternatives' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  correctAnswer?: string;
+
   @ApiPropertyOptional({ example: 'manual', default: 'manual' })
   @IsOptional()
   @IsString()
@@ -34,6 +40,12 @@ export class UpdateTaskDto {
   @MinLength(3)
   @MaxLength(2000)
   content?: string;
+
+  @ApiPropertyOptional({ example: 'x = 5' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  correctAnswer?: string;
 
   @ApiPropertyOptional({ example: 'manual' })
   @IsOptional()

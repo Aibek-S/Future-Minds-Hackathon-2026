@@ -170,14 +170,15 @@ model MaterialVector {
 }
 
 model Task {
-  id          String @id @default(cuid())
-  topicId     String
-  topic       Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  difficulty  String
-  content     String
-  source      String @default("manual")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String @id @default(cuid())
+  topicId       String
+  topic         Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  difficulty    String
+  content       String
+  correctAnswer String?
+  source        String @default("manual")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   attempts    Attempt[]
   assignments Assignment[] @relation("AssignmentTasks")

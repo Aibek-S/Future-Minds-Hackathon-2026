@@ -85,6 +85,7 @@ export class TopicsService {
         topicId,
         difficulty: dto.difficulty,
         content: dto.content,
+        correctAnswer: dto.correctAnswer ?? null,
         source: dto.source ?? 'manual',
       },
     });
