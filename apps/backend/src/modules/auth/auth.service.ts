@@ -49,7 +49,10 @@ export class AuthService {
       });
     }
 
-    return tokens;
+    return {
+      user: { id: user.id, name: user.name, role: user.role },
+      ...tokens,
+    };
   }
 
   async login(dto: LoginDto) {

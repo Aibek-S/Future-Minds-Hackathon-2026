@@ -3,10 +3,9 @@ import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
 
 const prisma = new PrismaClient();
-const SUBJECT_NAME = 'Алгебра, 9 класс';
 const DEMO_PASSWORD = 'password123';
 
-const topicSeeds = [
+const algebraTopicSeeds = [
   {
     name: 'Линейные уравнения',
     material: 'Линейное уравнение имеет вид ax + b = 0. Переносим свободный член и делим на коэффициент при x.',
@@ -97,6 +96,97 @@ const topicSeeds = [
   },
 ] as const;
 
+const geometryTopicSeeds = [
+  {
+    name: 'Треугольники',
+    material: 'Сумма углов треугольника равна 180 градусам. По двум сторонам и углу между ними можно определить треугольник.',
+    tasks: [
+      ['easy', 'Найдите третий угол треугольника с углами 50 и 60 градусов'],
+      ['easy', 'Найдите периметр треугольника со сторонами 3, 4 и 5'],
+      ['medium', 'Найдите площадь прямоугольного треугольника с катетами 6 и 8'],
+      ['medium', 'В равнобедренном треугольнике угол при вершине равен 40 градусов. Найдите углы при основании'],
+      ['hard', 'Найдите сторону по теореме косинусов при a=5, b=7 и угле между ними 60 градусов'],
+    ],
+  },
+  {
+    name: 'Четырёхугольники',
+    material: 'Сумма внутренних углов выпуклого четырёхугольника равна 360 градусам. У параллелограмма противоположные стороны и углы равны.',
+    tasks: [
+      ['easy', 'Найдите площадь прямоугольника со сторонами 5 и 8'],
+      ['easy', 'Найдите периметр квадрата со стороной 7'],
+      ['medium', 'Найдите площадь параллелограмма с основанием 9 и высотой 4'],
+      ['medium', 'Найдите диагональ прямоугольника со сторонами 6 и 8'],
+      ['hard', 'Найдите площадь ромба с диагоналями 10 и 12'],
+    ],
+  },
+  {
+    name: 'Окружность и круг',
+    material: 'Длина окружности равна 2piR, а площадь круга равна piR^2. Центральный угол опирается на дугу той же величины.',
+    tasks: [
+      ['easy', 'Найдите длину окружности радиуса 3 через pi'],
+      ['easy', 'Найдите площадь круга радиуса 4 через pi'],
+      ['medium', 'Найдите радиус окружности длиной 10pi'],
+      ['medium', 'Найдите длину дуги в 90 градусов окружности радиуса 8'],
+      ['hard', 'Найдите площадь сектора с радиусом 6 и углом 120 градусов'],
+    ],
+  },
+  {
+    name: 'Подобие фигур',
+    material: 'Подобные фигуры имеют равные соответствующие углы и пропорциональные стороны. Коэффициент площадей равен квадрату коэффициента подобия.',
+    tasks: [
+      ['easy', 'Стороны подобных фигур относятся как 2:3. Чему равен коэффициент подобия?'],
+      ['easy', 'Найдите неизвестную сторону: 3/5 = x/20'],
+      ['medium', 'Периметр первой фигуры 18, коэффициент подобия 2. Найдите периметр второй'],
+      ['medium', 'Площади подобных фигур относятся как 4:9. Найдите отношение сторон'],
+      ['hard', 'На карте масштаб 1:100000. Каково расстояние на местности для 7 см?'],
+    ],
+  },
+  {
+    name: 'Векторы',
+    material: 'Вектор задаётся направлением и длиной. Координаты суммы векторов складываются покомпонентно.',
+    tasks: [
+      ['easy', 'Найдите сумму векторов (2, 3) и (1, 4)'],
+      ['easy', 'Найдите длину вектора (3, 4)'],
+      ['medium', 'Найдите координаты вектора AB для A(1, 2) и B(5, 7)'],
+      ['medium', 'Скалярное произведение векторов (2, 1) и (3, 4)'],
+      ['hard', 'При каком значении x векторы (x, 2) и (3, -6) перпендикулярны?'],
+    ],
+  },
+  {
+    name: 'Координатная геометрия',
+    material: 'Расстояние между точками вычисляется по теореме Пифагора через разности координат, а середина отрезка находится усреднением координат.',
+    tasks: [
+      ['easy', 'Найдите расстояние между точками (0, 0) и (3, 4)'],
+      ['easy', 'Найдите середину отрезка с концами (2, 4) и (6, 8)'],
+      ['medium', 'Запишите уравнение прямой с угловым коэффициентом 2 через точку (0, 3)'],
+      ['medium', 'Найдите координаты точки пересечения y=2x и y=x+4'],
+      ['hard', 'Найдите уравнение окружности с центром (2, -1) и радиусом 3'],
+    ],
+  },
+  {
+    name: 'Площади и объёмы',
+    material: 'Площадь призмы и цилиндра связана с площадью основания и высотой. Объём прямоугольного параллелепипеда равен произведению трёх измерений.',
+    tasks: [
+      ['easy', 'Найдите объём куба с ребром 3'],
+      ['easy', 'Найдите объём параллелепипеда со сторонами 2, 3 и 5'],
+      ['medium', 'Найдите площадь полной поверхности куба с ребром 4'],
+      ['medium', 'Найдите объём цилиндра радиуса 3 и высоты 5 через pi'],
+      ['hard', 'Найдите высоту призмы объёмом 120 и площадью основания 15'],
+    ],
+  },
+  {
+    name: 'Теорема Пифагора',
+    material: 'В прямоугольном треугольнике квадрат гипотенузы равен сумме квадратов катетов: c^2 = a^2 + b^2.',
+    tasks: [
+      ['easy', 'Найдите гипотенузу по катетам 3 и 4'],
+      ['easy', 'Найдите катет по гипотенузе 5 и катету 3'],
+      ['medium', 'Проверьте, является ли треугольник со сторонами 6, 8 и 10 прямоугольным'],
+      ['medium', 'Найдите диагональ квадрата со стороной 5'],
+      ['hard', 'Лестница 13 м отстоит от стены на 5 м. На какую высоту она достаёт?'],
+    ],
+  },
+] as const;
+
 async function upsertDemoUser(input: {
   email: string;
   name: string;
@@ -111,9 +201,9 @@ async function upsertDemoUser(input: {
   });
 }
 
-async function upsertTopic(subjectId: string, name: string, index: number) {
+async function upsertTopic(subjectId: string, seeds: readonly { name: string }[], name: string, index: number) {
   const existing = await prisma.topic.findFirst({ where: { subjectId, name } });
-  const previousTopic = index > 0 ? topicSeeds[index - 1].name : undefined;
+  const previousTopic = index > 0 ? seeds[index - 1].name : undefined;
   const prerequisiteIds = previousTopic
     ? [
         (await prisma.topic.findFirstOrThrow({ where: { subjectId, name: previousTopic } })).id,
@@ -130,6 +220,36 @@ async function upsertTopic(subjectId: string, name: string, index: number) {
   return prisma.topic.create({
     data: { subjectId, name, prerequisites: prerequisiteIds },
   });
+}
+
+async function seedSubject(
+  subjectName: string,
+  seeds: readonly { name: string; material: string; tasks: readonly (readonly [string, string])[] }[],
+) {
+  const subject = await prisma.subject.upsert({
+    where: { name: subjectName },
+    update: {},
+    create: { name: subjectName },
+  });
+
+  for (const [index, topicSeed] of seeds.entries()) {
+    const topic = await upsertTopic(subject.id, seeds, topicSeed.name, index);
+    await upsertMaterial(topic.id, topicSeed.material);
+
+    for (const [difficulty, content] of topicSeed.tasks) {
+      const existingTask = await prisma.task.findFirst({ where: { topicId: topic.id, content } });
+      if (existingTask) {
+        await prisma.task.update({
+          where: { id: existingTask.id },
+          data: { difficulty, source: 'seed' },
+        });
+      } else {
+        await prisma.task.create({
+          data: { topicId: topic.id, difficulty, content, source: 'seed' },
+        });
+      }
+    }
+  }
 }
 
 async function upsertMaterial(topicId: string, content: string) {
@@ -178,32 +298,10 @@ async function main() {
     create: { userId: teacherUser.id },
   });
 
-  const subject = await prisma.subject.upsert({
-    where: { name: SUBJECT_NAME },
-    update: {},
-    create: { name: SUBJECT_NAME },
-  });
+  await seedSubject('Алгебра, 9 класс', algebraTopicSeeds);
+  await seedSubject('Геометрия, 9 класс', geometryTopicSeeds);
 
-  for (const [index, topicSeed] of topicSeeds.entries()) {
-    const topic = await upsertTopic(subject.id, topicSeed.name, index);
-    await upsertMaterial(topic.id, topicSeed.material);
-
-    for (const [difficulty, content] of topicSeed.tasks) {
-      const existingTask = await prisma.task.findFirst({ where: { topicId: topic.id, content } });
-      if (existingTask) {
-        await prisma.task.update({
-          where: { id: existingTask.id },
-          data: { difficulty, source: 'seed' },
-        });
-      } else {
-        await prisma.task.create({
-          data: { topicId: topic.id, difficulty, content, source: 'seed' },
-        });
-      }
-    }
-  }
-
-  console.info(`Seed complete: ${topicSeeds.length} topics and ${topicSeeds.length * 5} tasks`);
+  console.info('Seed complete: 2 subjects, 16 topics and 80 tasks');
 }
 
 main()

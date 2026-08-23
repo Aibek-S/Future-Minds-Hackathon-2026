@@ -19,8 +19,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       (key) => typeof key === 'string' && !key.startsWith('_') && !key.startsWith('$'),
     );
     for (const model of models) {
-      if (typeof this[model]?.deleteMany === 'function') {
-        await this[model].deleteMany();
+      const candidate = this[model as keyof PrismaService] as { deleteMany?: () => Promise<unknown> } | undefined;
+      if (typeof candidate?.deleteMany === 'function') {
+        await candidate.deleteMany();
       }
     }
   }
