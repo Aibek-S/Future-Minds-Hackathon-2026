@@ -165,6 +165,17 @@ Content-Type: application/json (кроме multipart для voice)
 }
 ```
 
+### `GET /students/:id/subjects` — сводка по предметам (в каком предмете сильнее)
+```json
+// Response 200
+{
+  "subjects": [
+    { "id": "sub_1", "name": "Алгебра, 9 класс", "avgMastery": 0.63, "topicCount": 8, "topicsCompleted": 3 },
+    { "id": "sub_2", "name": "Геометрия, 9 класс", "avgMastery": 0.18, "topicCount": 8, "topicsCompleted": 0 }
+  ]
+}
+```
+
 ### `GET /students/:id/roadmap?subjectId=:subjectId` — адаптивный роадмап
 `subjectId` — необязательный параметр. При передаче roadmap и progress целей рассчитываются только по темам указанного предмета.
 ```json

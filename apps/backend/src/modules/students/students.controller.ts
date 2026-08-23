@@ -34,6 +34,14 @@ export class StudentsController {
     return this.studentsService.getKnowledge(id, request.user, query.subjectId);
   }
 
+  @Get(':id/subjects')
+  getSubjectSummary(
+    @Param('id') id: string,
+    @Req() request: { user: { id: string; role: string } },
+  ) {
+    return this.studentsService.getSubjectSummary(id, request.user);
+  }
+
   @Get(':id/roadmap')
   getRoadmap(
     @Param('id') id: string,

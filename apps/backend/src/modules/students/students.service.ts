@@ -103,6 +103,43 @@ export class StudentsService {
     };
   }
 
+  async getSubjectSummary(id: string, requester: { id: string; role: string }) {
+    await this.assertAccess(id, requester);
+    const subjects = await this.prisma.subject.findMany({
+      orderBy: { name: 'asc' },
+      include: {
+        topics: {
+          include: {
+            knowledge: { where: { studentId: id } },
+          },
+        },
+      },
+    });
+
+    return {
+      subjects: subjects.map((subject) => {
+        const topicCount = subject.topics.length;
+        const completed = subject.topics.filter(
+          (topic) => (topic.knowledge[0]?.mastery ?? 0) >= COMPLETED_MASTERY,
+        ).length;
+        const avgMastery =
+          topicCount > 0
+            ? subject.topics.reduce(
+                (sum, topic) => sum + (topic.knowledge[0]?.mastery ?? 0),
+                0,
+              ) / topicCount
+            : 0;
+        return {
+          id: subject.id,
+          name: subject.name,
+          avgMastery: Number(avgMastery.toFixed(3)),
+          topicCount,
+          topicsCompleted: completed,
+        };
+      }),
+    };
+  }
+
   async runDiagnostic(id: string, dto: DiagnosticDto, requester: { id: string; role: string }) {
     await this.assertAccess(id, requester);
     const topicIds = dto.answers.map((answer) => answer.topicId);
