@@ -147,8 +147,16 @@ export class AiService {
   ): Promise<AiProviderResponse> {
     let messages = initialMessages;
     const errors: string[] = [];
+    let providerIndex = 0;
 
     for (const entry of chain) {
+      // Small pause before switching providers so free-tier rate limits
+      // are not hammered at the same instant.
+      if (providerIndex > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 400));
+      }
+      providerIndex += 1;
+
       for (let attempt = 1; attempt <= entry.maxRetries + 1; attempt += 1) {
         try {
           const response = await entry.provider.chat({
@@ -163,6 +171,7 @@ export class AiService {
           return response;
         } catch (error) {
           const label = `${entry.provider.kind}/${entry.provider.model}`;
+          const detail = this.errorDetail(error);
 
           if (this.isContextOverflow(error)) {
             const trimmed = this.context.fitBudget(
@@ -181,15 +190,15 @@ export class AiService {
             maxRetries: entry.maxRetries,
             timeoutMs: this.router.timeoutMs(),
           });
-          errors.push(`${label}: ${decision.reason ?? 'error'}`);
+          errors.push(`${label}: ${decision.reason ?? 'error'} (${detail})`);
 
           if (decision.retry) {
-            this.logger.warn(`Retry ${attempt}/${entry.maxRetries + 1} on ${label}: ${decision.reason}`);
+            this.logger.warn(`Retry ${attempt}/${entry.maxRetries + 1} on ${label}: ${decision.reason} (${detail})`);
             await this.retry.wait(decision.delayMs ?? 500);
             continue;
           }
 
-          this.logger.warn(`Skipping ${label}: ${decision.reason}`);
+          this.logger.warn(`Skipping ${label}: ${decision.reason} (${detail})`);
           break;
         }
       }
@@ -199,6 +208,19 @@ export class AiService {
     throw new ServiceUnavailableException(
       'Сервис ИИ сейчас недоступен. Попробуйте ещё раз через минуту.',
     );
+  }
+
+  private errorDetail(error: unknown): string {
+    const anyError = error as {
+      message?: string;
+      status?: number;
+      code?: string;
+      name?: string;
+    };
+    const status = anyError.status !== undefined ? `status=${anyError.status}` : '';
+    const code = anyError.code ? `code=${anyError.code}` : '';
+    const message = anyError.message ? anyError.message.slice(0, 160) : '';
+    return [status, code, message].filter(Boolean).join(' ');
   }
 
   private async *mockStream(messages: ChatCompletionMessageParam[]): AiStream {

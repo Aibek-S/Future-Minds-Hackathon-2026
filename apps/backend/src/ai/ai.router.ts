@@ -57,7 +57,7 @@ export class AiRouterService {
   }
 
   private resolvePrimary(kind: AiProviderKind): AiProvider | null {
-    const model = this.config.get<string>(AI_ENV.primaryModel) ?? DEFAULTS.primaryModel;
+    let model = this.config.get<string>(AI_ENV.primaryModel) ?? DEFAULTS.primaryModel;
 
     if (kind === 'mock') {
       return null;
@@ -79,6 +79,7 @@ export class AiRouterService {
       if (!apiKey) {
         return null;
       }
+      model = this.normalizeOpenrouterModel(model);
       return new AiProvider({
         kind,
         model,
@@ -124,6 +125,35 @@ export class AiRouterService {
       baseURL: this.config.get<string>(AI_ENV.openrouterBaseUrl) ?? DEFAULTS.openrouterBaseUrl,
       apiKey: this.config.get<string>(AI_ENV.openrouterApiKey) ?? '',
     });
+  }
+
+  /**
+   * OpenRouter requires full provider-qualified IDs (org/model).
+   * Bare names (e.g. "deepseek-chat") are ambiguous and rejected.
+   * Known bare aliases are expanded; anything else without a slash
+   * falls back to the first free model from the pool.
+   */
+  private normalizeOpenrouterModel(model: string): string {
+    const trimmed = model.trim();
+    if (trimmed.includes('/')) {
+      return trimmed;
+    }
+    const aliases: Record<string, string> = {
+      'deepseek-chat': 'deepseek/deepseek-chat',
+      'deepseek-reasoner': 'deepseek/deepseek-r1',
+      'gpt-4o-mini': 'openai/gpt-4o-mini',
+      'gpt-4o': 'openai/gpt-4o',
+      'llama-3.3-70b': 'meta-llama/llama-3.3-70b-instruct',
+    };
+    if (aliases[trimmed]) {
+      this.logger.warn(`AI_PRIMARY_MODEL "${trimmed}" mapped to "${aliases[trimmed]}" for OpenRouter`);
+      return aliases[trimmed];
+    }
+    const fallback = this.fallbackModels()[0];
+    this.logger.warn(
+      `AI_PRIMARY_MODEL "${trimmed}" is not a valid OpenRouter ID, using first fallback "${fallback}"`,
+    );
+    return fallback;
   }
 
   private getInt(key: string, fallback: number): number {

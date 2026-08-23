@@ -42,7 +42,10 @@ export class AiProvider {
     this.client = new OpenAI({
       baseURL: config.baseURL,
       apiKey: config.apiKey,
-      timeout: 0,
+      // NOTE: timeout:0 in OpenAI SDK 7.x means "time out immediately",
+      // NOT "no timeout". We pass an explicit per-request timeout instead.
+      timeout: 30_000,
+      maxRetries: 0,
     });
   }
 
@@ -59,13 +62,16 @@ export class AiProvider {
       return this.chatBlocking(options);
     }
 
-    const stream = await this.client.chat.completions.create({
-      model: this.config.model,
-      messages: options.messages,
-      ...(options.tools?.length ? { tools: options.tools as never } : {}),
-      stream: true,
-      stream_options: { include_usage: true },
-    });
+    const stream = await this.client.chat.completions.create(
+      {
+        model: this.config.model,
+        messages: options.messages,
+        ...(options.tools?.length ? { tools: options.tools as never } : {}),
+        stream: true,
+        stream_options: { include_usage: true },
+      },
+      { timeout: options.timeoutMs },
+    );
 
     let text = '';
     const toolCallParts = new Map<number, { id?: string; name?: string; arguments: string }>();
@@ -113,11 +119,14 @@ export class AiProvider {
   }
 
   private async chatBlocking(options: AiProviderOptions): Promise<AiProviderResponse> {
-    const completion = await this.client.chat.completions.create({
-      model: this.config.model,
-      messages: options.messages,
-      ...(options.tools?.length ? { tools: options.tools as never } : {}),
-    });
+    const completion = await this.client.chat.completions.create(
+      {
+        model: this.config.model,
+        messages: options.messages,
+        ...(options.tools?.length ? { tools: options.tools as never } : {}),
+      },
+      { timeout: options.timeoutMs },
+    );
 
     const message = completion.choices?.[0]?.message;
     return {
