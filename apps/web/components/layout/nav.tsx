@@ -33,7 +33,6 @@ export const STUDENT_NAV_SECONDARY = [
   { href: "/learn", icon: BookOpen, key: "learn" as const },
   { href: "/tutor", icon: Sparkles, key: "tutor" as const },
   { href: "/shop", icon: ShoppingBag, key: "shop" as const },
-  { href: "/profile", icon: User, key: "profile" as const },
 ];
 
 export const TEACHER_NAV = [
