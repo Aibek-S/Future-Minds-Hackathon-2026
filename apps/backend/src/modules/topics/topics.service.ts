@@ -12,12 +12,33 @@ export class TopicsService {
 
   async addMaterial(topicId: string, dto: CreateMaterialDto) {
     await this.ensureTopic(topicId);
-    const chunks = this.chunkText(dto.content!);
-    for (const content of chunks) {
-      const embedding = `[${(await this.embeddings.embed(content)).join(',')}]`;
-      await this.prisma.$executeRaw`INSERT INTO "MaterialVector" (id, "topicId", content, metadata, embedding) VALUES (${randomUUID()}, ${topicId}, ${content}, ${JSON.stringify({ sourceUrl: dto.sourceUrl ?? null, chunkCount: chunks.length })}::jsonb, ${embedding}::vector)`;
+    const ingestion = await this.prisma.materialIngestion.create({ data: { topicId, content: dto.content!, sourceUrl: dto.sourceUrl } });
+    setImmediate(() => { void this.vectorize(ingestion.id); });
+    return { materialId: ingestion.id, status: 'vectorizing' };
+  }
+
+  async getMaterialStatus(topicId: string, materialId: string) {
+    const ingestion = await this.prisma.materialIngestion.findFirst({ where: { id: materialId, topicId } });
+    if (!ingestion) throw new NotFoundException('Material ingestion not found');
+    return { materialId: ingestion.id, status: ingestion.status.toLowerCase(), error: ingestion.error };
+  }
+
+  private async vectorize(ingestionId: string) {
+    const ingestion = await this.prisma.materialIngestion.findUnique({ where: { id: ingestionId } });
+    if (!ingestion) return;
+    const chunks = this.chunkText(ingestion.content);
+    try {
+      let materialVectorId: string | undefined;
+      for (const content of chunks) {
+        const vectorId = randomUUID();
+        materialVectorId ??= vectorId;
+        const embedding = `[${(await this.embeddings.embed(content)).join(',')}]`;
+        await this.prisma.$executeRaw`INSERT INTO "MaterialVector" (id, "topicId", content, metadata, embedding) VALUES (${vectorId}, ${ingestion.topicId}, ${content}, ${JSON.stringify({ sourceUrl: ingestion.sourceUrl ?? null, ingestionId, chunkCount: chunks.length })}::jsonb, ${embedding}::vector)`;
+      }
+      await this.prisma.materialIngestion.update({ where: { id: ingestionId }, data: { status: 'COMPLETED', materialVectorId } });
+    } catch (error) {
+      await this.prisma.materialIngestion.update({ where: { id: ingestionId }, data: { status: 'FAILED', error: error instanceof Error ? error.message.slice(0, 500) : 'Vectorization failed' } });
     }
-    return { status: 'completed', chunks: chunks.length };
   }
 
   async listTopics(subjectId?: string) {
