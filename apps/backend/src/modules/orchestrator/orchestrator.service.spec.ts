@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { RecommendationStatus, RecommendationType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AiService } from '../../ai/ai.service';
 import { OrchestratorService } from './orchestrator.service';
 
 describe('OrchestratorService', () => {
@@ -33,7 +34,10 @@ describe('OrchestratorService', () => {
       aiRecommendation: { create: jest.fn(), findMany: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
       $transaction: jest.fn(),
     };
-    service = new OrchestratorService(prisma as unknown as PrismaService);
+    service = new OrchestratorService(
+      prisma as unknown as PrismaService,
+      { generate: jest.fn().mockResolvedValue({ text: 'AI lesson recommendation' }) } as unknown as AiService,
+    );
   });
 
   it('creates a lesson-plan recommendation from the weakest class topic', async () => {

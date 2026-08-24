@@ -20,6 +20,7 @@ import { FeedbackModule } from './modules/feedback/feedback.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { VoiceFeedbackModule } from './modules/voice-feedback/voice-feedback.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { RealtimeModule } from './modules/realtime/realtime.module';
     NotificationsModule,
     VoiceFeedbackModule,
     RealtimeModule,
+    AdminModule,
   ],
 })
 export class AppModule {}
