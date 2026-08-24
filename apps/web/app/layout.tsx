@@ -4,7 +4,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 const nunito = Nunito({ subsets: ["latin", "cyrillic"], variable: "--font-app" });
-const comfortaa = Comfortaa({ subsets: ["latin", "cyrillic"], weight: ["700", "800", "900"], variable: "--font-display" });
+const comfortaa = Comfortaa({ subsets: ["latin", "cyrillic"], weight: "700", variable: "--font-display" });
 
 export const metadata: Metadata = {
   title: "ZERTTE — адаптивное обучение с ИИ",

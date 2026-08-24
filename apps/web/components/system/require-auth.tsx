@@ -4,7 +4,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { tokenStore } from "@/lib/api/client";
-import { authService, useMe } from "@/lib/hooks/use-auth";
+import { authService } from "@/lib/services/auth";
+import { useMe } from "@/lib/hooks/use-auth";
 
 /**
  * Auth gate without hydration mismatches:
