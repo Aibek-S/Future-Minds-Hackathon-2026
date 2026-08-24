@@ -1,4 +1,6 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Queue, Worker } from 'bullmq';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateTopicDto, UpdateTopicDto } from './dto/topic.dto';
 import { CreateTaskDto, TASK_DIFFICULTIES, UpdateTaskDto } from './dto/task.dto';
@@ -7,13 +9,25 @@ import { EmbeddingsService } from '../../ai/embeddings.service';
 import { randomUUID } from 'crypto';
 
 @Injectable()
-export class TopicsService {
-  constructor(private readonly prisma: PrismaService, private readonly embeddings: EmbeddingsService) {}
+export class TopicsService implements OnModuleInit, OnModuleDestroy {
+  private materialQueue!: Queue<{ ingestionId: string }>;
+  private materialWorker!: Worker<{ ingestionId: string }>;
+
+  constructor(private readonly prisma: PrismaService, private readonly embeddings: EmbeddingsService, private readonly config: ConfigService) {}
+
+  onModuleInit() {
+    const connection = { host: this.config.get<string>('REDIS_HOST') ?? 'localhost', port: Number(this.config.get<string>('REDIS_PORT') ?? 6379) };
+    this.materialQueue = new Queue('material-vectorization', { connection });
+    this.materialWorker = new Worker('material-vectorization', async (job) => this.vectorize(job.data.ingestionId), { connection });
+    void this.resumePendingIngestions();
+  }
+
+  async onModuleDestroy() { await Promise.all([this.materialWorker?.close(), this.materialQueue?.close()]); }
 
   async addMaterial(topicId: string, dto: CreateMaterialDto) {
     await this.ensureTopic(topicId);
     const ingestion = await this.prisma.materialIngestion.create({ data: { topicId, content: dto.content!, sourceUrl: dto.sourceUrl } });
-    setImmediate(() => { void this.vectorize(ingestion.id); });
+    await this.materialQueue.add('vectorize', { ingestionId: ingestion.id }, { jobId: ingestion.id, attempts: 3, backoff: { type: 'exponential', delay: 1000 }, removeOnComplete: 1000, removeOnFail: 1000 });
     return { materialId: ingestion.id, status: 'vectorizing' };
   }
 
@@ -39,6 +53,11 @@ export class TopicsService {
     } catch (error) {
       await this.prisma.materialIngestion.update({ where: { id: ingestionId }, data: { status: 'FAILED', error: error instanceof Error ? error.message.slice(0, 500) : 'Vectorization failed' } });
     }
+  }
+
+  private async resumePendingIngestions() {
+    const pending = await this.prisma.materialIngestion.findMany({ where: { status: 'VECTORIZING' }, select: { id: true } });
+    await Promise.all(pending.map((item) => this.materialQueue.add('vectorize', { ingestionId: item.id }, { jobId: item.id, attempts: 3, backoff: { type: 'exponential', delay: 1000 } }).catch(() => undefined)));
   }
 
   async listTopics(subjectId?: string) {
