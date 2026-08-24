@@ -1,0 +1,5 @@
+-- This migration is intentionally empty.
+-- The full schema (including Lesson.topicId, Topic.lessons, Assignment.dueDate
+-- and Lesson.updatedAt) is now generated from prisma/schema.prisma inside the
+-- 20260823_init_schema baseline migration. It is kept only for migration
+-- history continuity on databases that already applied the previous baseline.

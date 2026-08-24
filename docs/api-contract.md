@@ -270,56 +270,85 @@ Content-Type: application/json (кроме multipart для voice)
 
 ---
 
-## 5. AI Tutor (Чат с виджетами + SSE)
+## 5. AI-чаты по сценариям (SessionKind + SSE)
 
-### `POST /tutor/sessions` — создать сессию
+> Единая модель `TutorSession` с полем `kind`. Каждый сценарий — отдельный URL,
+> свой системный промпт, свои tools и виджеты, доступ только своей роли.
+
+**SessionKind:** `STUDENT_CHAT | DIAGNOSTIC | FEEDBACK | ORCHESTRATOR`
+
+| Сценарий | URL | Роль | Что делает |
+|---|---|---|---|
+| Обычный чат ученика | `/chat/sessions` | STUDENT | репетитор, знает прогресс |
+| Диагностика | `/diagnostic/sessions` | STUDENT | reverse-asking, 1 вопрос за раз |
+| Фидбэк | `/feedback/sessions` | STUDENT | анализ «что понял/повторить» |
+| Оркестратор | `/orchestrator/chat/sessions` | TEACHER | план урока по статистике класса |
+
+> Роль проверяется на бэкенде: STUDENT-чаты недоступны учителю (403) и наоборот.
+
+### `POST /{scenario}/sessions` — создать сессию сценария
 ```json
-// Request
-{ "studentId": "s_1", "topicId?: "top_2" }
-
 // Response 201
-{ "sessionId": "sess_1", "createdAt": "2026-08-21T10:00:00Z" }
+{ "sessionId": "sess_1", "kind": "DIAGNOSTIC", "createdAt": "2026-08-21T10:00:00Z" }
 ```
 
-### `POST /tutor/sessions/:id/messages` — отправить сообщение (SSE streaming)
+### `GET /{scenario}/sessions` — список своих сессий
 ```json
-// Request
-{ "role": "student", "content": "Я не понимаю производную." }
+// Response 200
+{ "sessions": [ { "id": "sess_1", "createdAt": "...", "messageCount": 4 } ] }
+```
+
+### `POST /{scenario}/sessions/:id/messages` — отправить сообщение (SSE streaming)
+```json
+// Request (для ORCHESTRATOR дополнительно передаётся classId)
+{ "content": "Что делать на следующем уроке?", "classId": "c_1" }
 
 // Response: SSE stream
 // Event: message
-data: { "role": "assistant", "content": "Смотри, у тебя mastery по функциям 81%...", "socraticMode": true }
+data: { "text": "Рекомендую повторить теорему Виета…" }
 
-// Event: widget (после полного JSON виджета)
-data: { "type": "QUIZ", "payload": { "question": "...", "options": ["A","B","C"], "correctIndex": 0 } }
+// Event: widget (в строгом порядке сегментов)
+data: { "widget": { "type": "QUIZ", "payload": { ... } } }
 
 // Event: done
-data: { "sessionId": "sess_1", "summary": { "understood": ["basic derivative"], "struggled": ["chain rule"] } }
+data: { "usage": { "inputTokens": 123, "outputTokens": 45, "model": "deepseek-chat", "provider": "deepseek" } }
 ```
 
-> **Виджеты (строгий JSON контракт, никакого HTML):**
-> - `QUIZ` — `{ question, options[], correctIndex, explanation? }`
-> - `ROADMAP` — `{ current, next[], goals[] }`
-> - `LESSON_PLAN` — `{ objectives[], warmup, explanation, practice[], homework }`
-> - `FLASHCARD` — `{ front, back, topicId }`
-
-### `GET /tutor/sessions/:id` — история сообщений
+### `GET /{scenario}/sessions/:id` — история сообщений
 ```json
 // Response 200
 {
   "sessionId": "sess_1",
+  "kind": "DIAGNOSTIC",
   "messages": [
-    { "role": "student", "content": "...", "widget?: {} },
-    { "role": "assistant", "content": "...", "widget?: {} }
-  ],
-  "summary": { "understood": [], "struggled": [], "recommendation": { "topic": "chain_rule", "difficulty": "basic" } }
+    { "role": "user", "content": "Привет", "widget": null },
+    { "role": "assistant", "content": "К чему готовишься?", "widget": { "type": "QUIZ", "payload": { ... } } }
+  ]
 }
 ```
 
-### Function Calling (внутренний, не в API)
-- `update_student_profile(goals, level, preferences)` → `PUT /students/:id`
-- `get_knowledge_state(studentId)` → `GET /students/:id/knowledge`
-- `search_materials(query, topicId)` → RAG (pgvector)
+### Виджеты (строгий JSON-контракт, без HTML; максимум `AI_MAX_WIDGETS`, дефолт 3)
+> Ответ с виджетами — JSON `{"segments":[...]}`, где каждый элемент
+> `{ "kind": "text", "text": "..." }` или `{ "kind": "widget", "widget": {...} }`.
+> Виджеты появляются ровно в порядке сегментов. Битый виджет дропается, текст сохраняется.
+
+- `QUIZ` — `{ question, options[], correctIndex, explanation? }`
+- `MATH_EXPRESSION` — `{ prompt, expected, explanation? }`
+- `FORMULA_CARD` — `{ title, formula, note? }`
+- `STEP_BY_STEP` — `{ problem, steps: [{ title, content }] }`
+- `CONFIRM` — `{ title, text, resourceType? }` (учитель: «Принять / Отклонить»)
+
+### Tools (Function Calling, выполняется на бэкенде, ИИ в БД не пишет)
+- `get_knowledge_state(studentId, subjectId?)` — mastery по темам
+- `get_subject_summary(studentId)` — сравнение предметов
+- `get_roadmap(studentId, subjectId?)` — план обучения
+- `update_student_profile(goals, preferences)` — применяется через валидированный сервис
+- `get_class_overview(classId)` — статистика класса (учитель)
+
+### Лимиты
+- `AI_MAX_WIDGETS` — макс. виджетов на сообщение (env, дефолт 3)
+- `AI_MAX_RETRIES_PRIMARY` / `AI_MAX_RETRIES_FALLBACK` — ретраи LLM
+- `AI_TIMEOUT_MS` — таймаут запроса LLM
 
 ---
 
@@ -389,6 +418,68 @@ curl -X POST /v1/voice-feedback \
 // Response 200 — { "classId": "c_1", "message": "Joined successfully" }
 ```
 
+`id` и `code` должны относиться к одному классу. Ученик определяется по JWT; при успешном входе
+его `student.classId` заменяется на идентификатор класса.
+
+### `DELETE /classes/:id/students/:sid` — исключить ученика
+```json
+// Response 200
+{ "studentId": "s_1", "classId": null, "message": "Student removed from class" }
+```
+
+Доступен только владельцу класса (или ADMIN). Прогресс и история попыток ученика сохраняются.
+
+### `DELETE /classes/:id` — удалить класс
+```json
+// Response 200
+{ "id": "c_1", "message": "Class deleted; students switched to autonomous mode" }
+```
+
+Перед удалением всем ученикам класса устанавливается `classId: null`.
+
+### `POST /classes/:id/lessons` — создать урок
+```json
+// Request
+{
+  "date": "2026-09-01T09:00:00.000Z",
+  "topicId": "top_1",
+  "planJson": {
+    "objectives": ["Решать линейные уравнения"],
+    "warmup": "Повторение",
+    "explanation": "Метод баланса",
+    "practice": ["2x + 3 = 7"],
+    "differentiatedTasks": { "weak": ["Пример с подсказкой"], "strong": ["Текстовая задача"] },
+    "assessment": "Exit ticket",
+    "homework": "Упражнения 1–5"
+  }
+}
+```
+
+`planJson` обязателен и валидируется по этой структуре: непустые массивы `objectives` и
+`practice`; непустые строки `warmup`, `explanation`, `assessment`, `homework`; объект
+`differentiatedTasks` с непустыми массивами `weak` и `strong`.
+
+### `GET /classes/:id/lessons?from=&to=` — календарь уроков
+
+Возвращает уроки класса в указанном диапазоне дат, тему и количество связанных заданий/отзывов.
+
+### `GET /lessons/:id` / `PUT /lessons/:id` / `DELETE /lessons/:id`
+
+Детали содержат связанные assignments и статусы учеников. Редактирование и удаление доступны
+только учителю-владельцу класса.
+
+### `POST /lessons/:id/feedback` — отзыв ученика
+```json
+// Request
+{ "rating": 5, "commentOrAudioUrl": "Упражнения помогли понять тему" }
+```
+
+Отзыв можно оставить только после `lesson.date` и только ученику этого класса.
+
+### `GET /lessons/:id/feedback` — отзывы по уроку
+
+Доступно учителю-владельцу класса; ответ содержит автора, рейтинг, текст или URL голосового отзыва.
+
 ### `GET /classes/:id/overview` — дашборд класса
 ```json
 // Response 200
@@ -396,12 +487,24 @@ curl -X POST /v1/voice-feedback \
   "classMastery": 0.64,
   "strongTopics": [{ "topicId": "top_1", "topicName": "Functions", "mastery": 0.81 }],
   "weakTopics": [{ "topicId": "top_2", "topicName": "Chain Rule", "mastery": 0.43 }],
-  "studentsNeedingRemediation": 12,
-  "heatmap": [                    // Ученики × Темы
-    { "studentId": "s_1", "studentName": "Алтаир", "topics": { "top_1": 0.81, "top_2": 0.41 } }
-  ]
+  "studentsNeedingRemediation": 12
 }
 ```
+
+### `GET /classes/:id/heatmap` — матрица «Ученики × Темы»
+```json
+// Response 200
+{
+  "topics": [{ "id": "top_1", "name": "Functions" }],
+  "students": [{
+    "studentId": "s_1",
+    "studentName": "Алтаир",
+    "topics": [{ "topicId": "top_1", "mastery": 0.81, "status": "GREEN" }]
+  }]
+}
+```
+
+`GREEN` — mastery ≥ 0.7, `YELLOW` — 0.4–0.699, `RED` — < 0.4.
 
 ### `GET /classes/:id/students` — список учеников
 ```json
@@ -424,8 +527,18 @@ curl -X POST /v1/voice-feedback \
   "weakTopics": ["Chain Rule", "Word Problems"],
   "recentMistakes": [
     { "topicId": "top_2", "type": "CALCULATION_ERROR", "count": 3 }
-  ],
-  "voiceFeedbackAlerts": 2
+  ]
+}
+```
+
+### `GET /classes/:id/students/:sid/attempts` — история попыток ученика
+```json
+// Response 200
+{
+  "attempts": [{
+    "id": "att_1", "taskId": "t_1", "topicId": "top_2", "topicName": "Chain Rule",
+    "answer": "...", "correct": false, "attemptNumber": 2, "createdAt": "2026-08-20T10:00:00Z"
+  }]
 }
 ```
 
@@ -433,7 +546,30 @@ curl -X POST /v1/voice-feedback \
 
 ## 9. AI Teacher Orchestrator
 
-### `POST /orchestrator/query` — вопрос учителю от ИИ
+> Два режима: **чат** (`/orchestrator/chat/sessions`, только TEACHER, LLM + статистика класса + CONFIRM-виджет)
+> и классический `query`/`recommendations`. Единое правило: **AI никогда не пишет в БД напрямую** —
+> только через approve учителя.
+
+### `POST /orchestrator/chat/sessions` — чат-сессия учителя (только TEACHER)
+```json
+// Response 201
+{ "sessionId": "sess_1", "kind": "ORCHESTRATOR", "createdAt": "..." }
+```
+
+### `POST /orchestrator/chat/sessions/:id/messages` — вопрос по классу (SSE)
+```json
+// Request
+{ "content": "Предложи план урока", "classId": "c_1" }
+
+// Response: SSE
+// Event: message  -> текст с обоснованием (цифры из get_class_overview)
+// Event: widget   -> { "type": "CONFIRM", "payload": { "title": "План урока", "text": "...", "resourceType": "LESSON_PLAN" } }
+// Event: done     -> usage
+```
+> Учитель подтверждает предложение кнопкой в CONFIRM-виджете, далее фронт вызывает
+> `POST /recommendations/:id/approve` (или `/reject`).
+
+### `POST /orchestrator/query` — вопрос учителю от ИИ (одноразовый)
 ```json
 // Request
 { "teacherId": "t_1", "classId": "c_1", "question": "Что делать на следующем уроке?" }
@@ -473,9 +609,10 @@ curl -X POST /v1/voice-feedback \
 { "edits": { "revisionMinutes": 10 } }
 
 // Response 200
-{ "id": "rec_1", "status": "approved" }
+{ "id": "rec_1", "status": "approved", "lessonId": "lesson_1" }
 ```
-> Создаёт `assignments` + `student_assignments` на основе `payload`.
+> Для рекомендации `LESSON_PLAN` создаёт Lesson на основе `payload`; `edits` может изменить
+> `topicId`, `date` или полный `planJson`, который повторно валидируется по схеме урока.
 
 ### `POST /recommendations/:id/reject`
 ```json
@@ -520,10 +657,17 @@ curl -X POST /v1/voice-feedback \
 }
 
 // Response 201
-{ "assignmentId": "asg_1", "studentAssignments": [...] }
+{ "id": "asg_1", "studentAssignments": [...] }
 ```
 
+Для ONLINE `taskIds` обязательны и каждая задача должна принадлежать указанной теме. При
+`isUnique: true` все `targetIds` обязательны и должны быть учениками этого класса; иначе ДЗ
+создаётся для всех учеников класса.
+
 ### `GET /assignments/:id` — детали задания
+
+Доступно учителю-владельцу класса; ответ содержит тему, урок при наличии, задачи и статусы
+`studentAssignments` с именами учеников.
 
 ### `POST /student-assignments/:id/submit` — ученик сдаёт (ONLINE: ответ, OFFLINE: "Сдал в классе")
 ```json
@@ -536,6 +680,9 @@ curl -X POST /v1/voice-feedback \
 { "status": "AI_GRADED" | "PENDING_VERIFICATION" }
 ```
 
+ONLINE принимает ровно один ответ на каждую задачу и сохраняет результат `AnswerChecker`.
+OFFLINE переводится в `PENDING_VERIFICATION` только после `{ "submittedInClass": true }`.
+
 ### `POST /student-assignments/:id/verify` — учитель проверяет OFFLINE
 ```json
 // Request
@@ -543,7 +690,20 @@ curl -X POST /v1/voice-feedback \
 // Response 200 — { "status": "TEACHER_VERIFIED" | "REVISION_REQUIRED" }
 ```
 
+Проверять можно только submitted OFFLINE-работу. Для `REJECT` обязателен `comment`, который
+сохраняется вместе с отправленной работой.
+
 ---
+
+### `GET /notifications/stream` — realtime уведомления ученика
+
+SSE-поток с Bearer JWT. При `REJECT` offline-ДЗ ученик получает событие:
+```json
+{
+  "type": "ASSIGNMENT_REVISION_REQUIRED",
+  "payload": { "studentAssignmentId": "sa_1", "comment": "Нужно перерешать" }
+}
+```
 
 ## 12. WebSocket Events (Real-time)
 
@@ -570,25 +730,28 @@ curl -X POST /v1/voice-feedback \
 
 **Header:** `X-Demo-User: student | teacher`
 
-Если заголовок присутствует:
-- LLM/RAG/Orchestrator ответы берутся из Redis кэша
-- Имитация задержки 300-400ms
-- Реальные провайдеры не вызываются
+> ⚠️ Планируется, не реализовано. Идея: LLM/RAG/Orchestrator ответы для demo-аккаунтов
+> берутся из Redis-кэша с имитацией задержки 300–400 мс, чтобы 3-минутное видео не зависало
+> на реальных 5–12 секундах ответа LLM.
 
 ---
 
 ## 14. Rate Limiting & Security
 
-- `@nestjs/throttler` + Redis sliding window
-- Auth endpoints: 10 req/min
-- Tutor messages: 20/hr (автономный) / 50/hr (школьный)
-- Voice: 5/hr (автономный) / 20/hr (школьный)
+- `@nestjs/throttler` (глобальный лимит; per-endpoint лимиты — в TODO)
+- Chat / Diagnostic / Feedback / Orchestrator: 20–50 сообщений/час (автономный / школьный)
+- Voice: 5/hr (автономный) / 20/hr (школьный) — TODO
 - Prompt Injection Guard: пользовательский ввод в теги `[STUDENT_INPUT_START]...[STUDENT_INPUT_END]`
+- Ролевая изоляция чатов: STUDENT-чаты — только STUDENT, Orchestrator — только TEACHER
+- Виджеты — строгий JSON-контракт, битые отбрасываются (чат не падает)
 
 ---
 
 ## 15. Что НЕ в контракте (планируется после хакатона)
 
+- RAG / Vector Search (`search_materials` + реальные embeddings) — отдельный этап
+- Voice feedback (STT Whisper + анализ) — отдельный этап
+- WebSocket Realtime (heatmap live) — отдельный этап
 - Пагинация для всех списков (добавить при росте данных)
 - ТТS (голосовые ответы ИИ)
 - Мультиязычность (kz/en)
