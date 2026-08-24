@@ -1,5 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsArray, IsOptional, IsString, IsUrl, MaxLength, MinLength } from 'class-validator';
+
+export class CreateMaterialDto {
+  @IsString() @MinLength(1) @MaxLength(100000) content: string;
+  @IsOptional() @IsUrl() sourceUrl?: string;
+}
 
 export class CreateTopicDto {
   @ApiProperty({ example: 'Тригонометрия' })

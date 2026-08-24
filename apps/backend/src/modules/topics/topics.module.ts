@@ -5,9 +5,10 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { TasksController } from './tasks.controller';
 import { TopicsController } from './topics.controller';
 import { TopicsService } from './topics.service';
+import { AiModule } from '../../ai/ai.module';
 
 @Module({
-  imports: [AuthModule, PassportModule],
+  imports: [AuthModule, PassportModule, AiModule],
   controllers: [TopicsController, TasksController],
   providers: [TopicsService, RolesGuard],
 })
