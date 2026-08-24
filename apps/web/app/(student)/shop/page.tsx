@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Shirt, Sparkles, Wand2, Zap } from "lucide-react";
+import { Gem, Rocket, Shirt, Wand2 } from "lucide-react";
 import { Badge } from "@/components/ui/card";
 import { CoinBalance } from "@/components/gamification/badges";
 import { useGamification } from "@/lib/stores/gamification";
@@ -9,8 +9,8 @@ import { useGamification } from "@/lib/stores/gamification";
 const CATEGORIES = [
   { icon: <Shirt className="size-6" />, title: "Аватары", desc: "Настройте своего героя обучения" },
   { icon: <Wand2 className="size-6" />, title: "Темы оформления", desc: "Акценты и цвета интерфейса" },
-  { icon: <Sparkles className="size-6" />, title: "Косметика", desc: "Рамки, эффекты, титулы профиля" },
-  { icon: <Zap className="size-6" />, title: "Бустеры", desc: "Ускорение прогресса по темам" },
+  { icon: <Gem className="size-6" />, title: "Косметика", desc: "Рамки, эффекты, титулы профиля" },
+  { icon: <Rocket className="size-6" />, title: "Бустеры", desc: "Ускорение прогресса по темам" },
 ] as const;
 
 export default function ShopPage() {

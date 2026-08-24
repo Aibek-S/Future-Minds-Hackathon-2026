@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarPlus, Sparkles } from "lucide-react";
+import { CalendarPlus, NotebookPen } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/card";
@@ -46,7 +46,7 @@ export default function PlannerPage() {
         <div>
           <h1 className="flex items-center gap-2 text-3xl font-black">
             <span className="grid size-10 place-items-center rounded-lg bg-gradient-to-br from-primary to-[#6366F1] text-white">
-              <Sparkles className="size-5" />
+              <NotebookPen className="size-5" />
             </span>
             ИИ-планировщик уроков
           </h1>

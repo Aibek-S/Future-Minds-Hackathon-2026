@@ -1,11 +1,11 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Languages, LogOut, Menu, Sparkles } from "lucide-react";
+import { Languages, Menu } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { studentsService } from "@/lib/services/students";
-import { useMe, useLogout } from "@/lib/hooks/use-auth";
+import { useMe } from "@/lib/hooks/use-auth";
 import { useT } from "@/lib/i18n/use-t";
 import { LANGUAGES } from "@/lib/i18n/dictionaries";
 import type { UiLanguage } from "@/lib/types";
@@ -14,7 +14,6 @@ import { CoinBalance, MasteryBadge, StreakBadge } from "@/components/gamificatio
 export function AppHeader({ onMenu }: { onMenu?: () => void }) {
   const { t, lang, setLang } = useT();
   const me = useMe();
-  const logout = useLogout();
   const [langOpen, setLangOpen] = useState(false);
   const studentId = me.data?.student?.id;
 
@@ -91,31 +90,7 @@ export function AppHeader({ onMenu }: { onMenu?: () => void }) {
             )}
           </div>
 
-          {/* Avatar */}
-          <div className="group relative">
-            <button
-              className="grid size-10 place-items-center rounded-full bg-gradient-to-br from-primary to-[#6366F1] text-sm font-extrabold text-white"
-              aria-label="Профиль"
-              onClick={() => (window.location.href = "/profile")}
-            >
-              {(me.data?.name ?? "Я").slice(0, 1).toUpperCase()}
-            </button>
-            <div className="absolute right-0 top-12 hidden w-44 overflow-hidden rounded-md border border-border bg-surface shadow-pop group-hover:block group-focus-within:block">
-              <Link
-                href="/profile"
-                className="flex items-center gap-2 px-3 py-2.5 text-sm font-medium hover:bg-primary-subtle"
-              >
-                <Sparkles className="size-4 text-primary" /> {t.nav.profile}
-              </Link>
-              <button
-                onClick={logout}
-                className="flex w-full items-center gap-2 px-3 py-2.5 text-sm font-medium text-error hover:bg-[#FEF2F2]"
-              >
-                <LogOut className="size-4" /> {t.common.logout}
-              </button>
-            </div>
-          </div>
-        </div>
+</div>
       </div>
     </header>
   );

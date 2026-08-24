@@ -1,16 +1,15 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Flame, LogOut, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MasteryBar } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/card";
 import { CardSkeleton } from "@/components/ui/states";
 import { studentsService } from "@/lib/services/students";
-import { authService } from "@/lib/services/auth";
 import { api } from "@/lib/api/client";
-import { useLogout, useMe } from "@/lib/hooks/use-auth";
+import { useMe } from "@/lib/hooks/use-auth";
 import { useLanguage } from "@/lib/stores/language";
 import { useGamification } from "@/lib/stores/gamification";
 import { LANGUAGES } from "@/lib/i18n/dictionaries";
@@ -18,7 +17,6 @@ import type { UiLanguage } from "@/lib/types";
 
 export default function ProfilePage() {
   const me = useMe();
-  const logout = useLogout();
   const qc = useQueryClient();
   const studentId = me.data?.student?.id;
   const streak = useGamification((s) => s.streak);
@@ -83,17 +81,12 @@ export default function ProfilePage() {
             ) : (
               <>
                 <Badge tone="primary">{me.data?.student?.grade} класс</Badge>
-                <Badge tone="warning">
-                  <Flame className="size-3.5" /> {streak} дн.
-                </Badge>
+                <Badge tone="warning">🔥 {streak} дн.</Badge>
                 {overall != null && <Badge tone="success">Мастерство {Math.round(overall * 100)}%</Badge>}
               </>
             )}
           </div>
         </div>
-        <Button variant="outline" onClick={() => void authService.logout() === undefined && logout()}>
-          <LogOut className="size-4" /> Выйти
-        </Button>
       </section>
 
       {/* Subjects */}

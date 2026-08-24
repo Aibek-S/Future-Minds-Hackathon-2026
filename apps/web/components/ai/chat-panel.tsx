@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bot, Send, Sparkles, User } from "lucide-react";
+import { Send, Sparkles, User } from "lucide-react";
+import { ZereAvatar } from "./zere";
 import { tutorService } from "@/lib/services/tutor";
 import type { AiScenario, AiWidget } from "@/lib/types";
 import { AiMarkdown, StreamingDots } from "./markdown";
@@ -31,6 +32,7 @@ export function AiChatPanel({
   className,
   autoStartGreeting = true,
   onAssistantDone,
+  assistantAvatar,
 }: {
   scenario: AiScenario;
   greeting?: string;
@@ -41,6 +43,8 @@ export function AiChatPanel({
   className?: string;
   autoStartGreeting?: boolean;
   onAssistantDone?: () => void;
+  /** Custom assistant avatar (defaults to Zere mascot). */
+  assistantAvatar?: React.ReactNode;
 }) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -149,13 +153,15 @@ export function AiChatPanel({
               className={`flex gap-2.5 ${m.role === "user" ? "flex-row-reverse" : ""}`}
             >
               <span
-                className={`grid size-8 shrink-0 place-items-center rounded-full ${
-                  m.role === "assistant"
-                    ? "bg-gradient-to-br from-primary to-[#6366F1] text-white"
-                    : "bg-surface-2 text-text-2"
+                className={`grid size-8 shrink-0 place-items-center overflow-hidden rounded-full ${
+                  m.role === "assistant" ? "bg-primary-subtle ring-2 ring-primary-light" : "bg-surface-2 text-text-2"
                 }`}
               >
-                {m.role === "assistant" ? <Bot className="size-4" /> : <User className="size-4" />}
+                {m.role === "assistant" ? (
+                  (assistantAvatar ?? <ZereAvatar size={30} mood={m.streaming ? "thinking" : "happy"} />)
+                ) : (
+                  <User className="size-4" />
+                )}
               </span>
               <div className={`max-w-[85%] space-y-2 ${m.role === "user" ? "text-right" : ""}`}>
                 <div

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { MasteryBar } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/states";
 import { AiChatPanel } from "@/components/ai/chat-panel";
+import { ZereAvatar } from "@/components/ai/zere";
 import { studentsService } from "@/lib/services/students";
 import { topicsService } from "@/lib/services/topics";
 import type { DiagnosticAnswer } from "@/lib/types";
@@ -79,6 +80,7 @@ export default function DiagnosticPage() {
           {mode === "ai" ? (
             <AiChatPanel
               scenario="diagnostic"
+              assistantAvatar={<ZereAvatar size={30} mood="happy" />}
               greeting="Привет! Я проведу короткую диагностику. Я буду спрашивать по одному вопросу за раз — отвечай как знаешь. Готов? Скажи «поехали»."
               contextPrefix={`Ученик: ${me.data.name}, класс ${me.data.student?.grade ?? "?"}. Диагностика уровня знаний.`}
               className="h-full"

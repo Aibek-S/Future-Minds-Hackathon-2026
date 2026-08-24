@@ -14,17 +14,19 @@ import {
   Users,
   X,
   CalendarDays,
+  LogOut,
+  TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 import { useT } from "@/lib/i18n/use-t";
+import { useMe, useLogout } from "@/lib/hooks/use-auth";
 
 export const STUDENT_NAV = [
   { href: "/home", icon: Home, key: "home" },
-  { href: "/roadmap", icon: Map, key: "roadmap" },
   { href: "/practice", icon: Target, key: "practice" },
-  { href: "/progress", icon: Brain, key: "progress" },
+  { href: "/progress", icon: TrendingUp, key: "progress" },
 ] as const;
 
 export const STUDENT_NAV_SECONDARY = [
@@ -78,14 +80,7 @@ export function StudentSidebar({ open, onClose }: { open?: boolean; onClose?: ()
           ))}
         </nav>
 
-        <div className="border-t border-border p-4">
-          <div className="rounded-lg bg-primary-subtle p-3">
-            <p className="text-xs font-semibold text-primary">ZERTTE знает ваш уровень</p>
-            <p className="mt-1 text-[11px] leading-snug text-text-2">
-              Мастерство обновляется после каждого ответа.
-            </p>
-          </div>
-        </div>
+        <SidebarProfileCard />
       </aside>
     </>
   );
@@ -164,7 +159,7 @@ export function StudentBottomNav() {
   const pathname = usePathname();
   const items = [
     { href: "/home", icon: Home, label: t.nav.home },
-    { href: "/roadmap", icon: Map, label: t.nav.roadmap },
+    { href: "/learn", icon: BookOpen, label: t.nav.learn },
     { href: "/practice", icon: Target, label: t.nav.practice },
     { href: "/tutor", icon: Sparkles, label: t.nav.ai },
     { href: "/profile", icon: User, label: t.nav.profile },
@@ -206,4 +201,33 @@ export function StudentBottomNav() {
 
 export function CalendarIcon() {
   return <CalendarDays className="size-4" />;
+}
+
+function SidebarProfileCard() {
+  const { t } = useT();
+  const me = useMe();
+  const logout = useLogout();
+  const name = me.data?.name ?? "…";
+  return (
+    <div className="border-t border-border p-3">
+      <Link
+        href="/profile"
+        className="flex items-center gap-3 rounded-lg p-2 transition hover:bg-surface-2"
+      >
+        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-[#6366F1] text-sm font-extrabold text-white">
+          {name.slice(0, 1).toUpperCase()}
+        </span>
+        <span className="min-w-0 flex-1 leading-tight">
+          <span className="block truncate text-sm font-bold">{name}</span>
+          <span className="block truncate text-[11px] text-text-3">{t.nav.profile}</span>
+        </span>
+      </Link>
+      <button
+        onClick={logout}
+        className="mt-1 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-xs font-bold uppercase tracking-wide text-text-3 transition hover:bg-[#FEF2F2] hover:text-error"
+      >
+        <LogOut className="size-4" /> {t.common.logout}
+      </button>
+    </div>
+  );
 }

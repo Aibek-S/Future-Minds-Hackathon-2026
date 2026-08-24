@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowRight, Target } from "lucide-react";
+import { ArrowRight, Dumbbell } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -40,7 +40,7 @@ export default function PracticePage() {
     <div className="space-y-6">
       <div>
         <h1 className="flex items-center gap-2 text-3xl font-black">
-          <Target className="size-7 text-primary" /> Практика
+          <Dumbbell className="size-7 text-primary" /> Практика
         </h1>
         <p className="mt-1 text-text-2">Отработайте темы со слабым мастерством — они первыми в списке.</p>
       </div>

@@ -34,7 +34,7 @@
   --shadow-card: 0 4px 20px rgba(15, 23, 42, 0.06);
   --shadow-pop: 0 12px 40px rgba(124, 58, 237, 0.16);
 
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-app), ui-sans-serif, system-ui, sans-serif;
 
   --animate-pulse-current: pulse-current 2s ease-in-out infinite;
 }

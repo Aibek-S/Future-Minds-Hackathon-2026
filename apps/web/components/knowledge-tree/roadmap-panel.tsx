@@ -16,7 +16,7 @@ import { topicsService } from "@/lib/services/topics";
 import { useMe } from "@/lib/hooks/use-auth";
 import { subjectTheme } from "@/lib/subjects";
 
-export default function RoadmapPage() {
+export function RoadmapPanel() {
   const me = useMe();
   const studentId = me.data?.student?.id;
 
@@ -69,7 +69,7 @@ export default function RoadmapPage() {
   const currentTopicName = roadmap.data?.current?.topicName ?? subjects.data?.[0]?.name ?? "";
 
   return (
-    <div>
+    <div className="rounded-xl border border-border bg-surface/60 p-4 sm:p-6">
       {/* Subject chips */}
       <div className="scroll-thin -mx-4 mb-6 flex gap-2 overflow-x-auto px-4 pb-1">
         {(subjects.data ?? []).map((s, i) => {

@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, Bot, Lightbulb, X } from "lucide-react";
+import { ArrowRight, Lightbulb, X } from "lucide-react";
+import { ZereAvatar } from "@/components/ai/zere";
 import { Button } from "@/components/ui/button";
 import { AiChatPanel } from "@/components/ai/chat-panel";
 
@@ -104,9 +105,7 @@ export function AskAiPanel({
             transition={{ type: "spring", stiffness: 280, damping: 30 }}
           >
             <header className="flex items-center gap-3 border-b border-border bg-surface px-4 py-3.5">
-              <span className="grid size-9 place-items-center rounded-full bg-gradient-to-br from-primary to-[#6366F1] text-white">
-                <Bot className="size-5" />
-              </span>
+              <ZereAvatar size={36} mood="thinking" />
               <div className="flex-1">
                 <p className="text-sm font-black">ИИ-наставник</p>
                 <p className="truncate text-xs text-text-3">{topicName}</p>

@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Nunito } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 
-const inter = Inter({ subsets: ["latin", "cyrillic"], variable: "--font-inter" });
+// Rounded, friendly — closest free match to Duolingo's DIN Round. Full Cyrillic.
+const nunito = Nunito({ subsets: ["latin", "cyrillic"], variable: "--font-app" });
 
 export const metadata: Metadata = {
   title: "ZERTTE — адаптивное обучение с ИИ",
@@ -20,7 +21,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ru">
-      <body className={`${inter.variable} font-sans`}>
+      <body className={`${nunito.variable} font-sans`}>
         <Providers>{children}</Providers>
       </body>
     </html>

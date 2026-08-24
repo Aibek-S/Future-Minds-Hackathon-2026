@@ -154,7 +154,7 @@ function LessonPage() {
     return (
       <CenterShell>
         <p className="text-lg font-bold">Тема не найдена.</p>
-        <Link href="/roadmap" className="mt-4">
+        <Link href="/home" className="mt-4">
           <Button variant="secondary">К карте знаний</Button>
         </Link>
       </CenterShell>
@@ -172,7 +172,7 @@ function LessonPage() {
           total={Math.max(stats.answered, 1)}
           studentId={studentId}
           topicId={topicId}
-          onDone={() => router.push("/roadmap")}
+          onDone={() => router.push("/home")}
         />
       </CenterShell>
     );
@@ -183,7 +183,7 @@ function LessonPage() {
       <CenterShell>
         <p className="text-xl font-black">Для этой темы пока нет заданий</p>
         <p className="mt-2 text-text-2">Попросите учителя добавить задачи — или потренируйтесь в другой теме.</p>
-        <Link href="/roadmap" className="mt-6">
+        <Link href="/home" className="mt-6">
           <Button size="lg">К карте знаний</Button>
         </Link>
       </CenterShell>
@@ -286,7 +286,7 @@ function LessonPage() {
           <Button variant="outline" size="lg" onClick={() => setExitOpen(false)}>
             Остаться
           </Button>
-          <Button variant="danger" size="lg" onClick={() => router.push("/roadmap")}>
+          <Button variant="danger" size="lg" onClick={() => router.push("/home")}>
             Выйти
           </Button>
         </div>

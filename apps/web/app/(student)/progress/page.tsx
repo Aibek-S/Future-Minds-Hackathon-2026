@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { TrendingDown, TrendingUp } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, Tooltip as ChartTooltip } from "recharts";
 import { MasteryBar } from "@/components/ui/progress";
@@ -108,8 +108,8 @@ export default function ProgressPage() {
                 <div className="mb-1 flex items-center justify-between gap-2 text-sm">
                   <span className="truncate font-bold">{k.topicName}</span>
                   <span className="flex shrink-0 items-center gap-1.5 font-extrabold" style={{ color: masteryColor(k.mastery) }}>
-                    {k.trend === "improving" && <TrendingUp className="size-4 text-success" />}
-                    {k.trend === "declining" && <TrendingDown className="size-4 text-error" />}
+                    {k.trend === "improving" && <ArrowUpRight className="size-4 text-success" />}
+                    {k.trend === "declining" && <ArrowDownRight className="size-4 text-error" />}
                     {Math.round(k.mastery * 100)}%
                   </span>
                 </div>
