@@ -49,6 +49,13 @@ enum FeedbackTargetType {
   TUTOR_SESSION
 }
 
+enum VoiceFeedbackStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
 enum SessionKind {
   STUDENT_CHAT
   DIAGNOSTIC
@@ -70,6 +77,7 @@ model User {
   teacher   Teacher?
   feedbacks Feedback[]
   sessions  TutorSession[]
+  voiceFeedbacks VoiceFeedback[]
 }
 
 model Student {
@@ -318,6 +326,21 @@ model Feedback {
   session TutorSession? @relation("SessionFeedback", fields: [targetId], references: [id], map: "Feedback_session_fkey")
 
   @@index([targetType, targetId])
+}
+
+model VoiceFeedback {
+  id         String              @id @default(cuid())
+  userId     String
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  audioUrl   String
+  status     VoiceFeedbackStatus @default(PENDING)
+  transcript String?
+  analysis   Json?
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([status])
 }
 
 model AiRecommendation {

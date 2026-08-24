@@ -19,6 +19,9 @@ CREATE TYPE "MistakeType" AS ENUM ('CALCULATION_ERROR', 'CONCEPTUAL_ERROR', 'REA
 -- CreateEnum
 CREATE TYPE "FeedbackTargetType" AS ENUM ('LESSON', 'TUTOR_SESSION');
 
+-- CreateEnum
+CREATE TYPE "SessionKind" AS ENUM ('STUDENT_CHAT', 'DIAGNOSTIC', 'FEEDBACK', 'ORCHESTRATOR');
+
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
@@ -199,8 +202,9 @@ CREATE TABLE "StudentAssignment" (
 -- CreateTable
 CREATE TABLE "TutorSession" (
     "id" TEXT NOT NULL,
-    "studentId" TEXT NOT NULL,
-    "userId" TEXT,
+    "kind" "SessionKind" NOT NULL DEFAULT 'STUDENT_CHAT',
+    "userId" TEXT NOT NULL,
+    "studentId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "TutorSession_pkey" PRIMARY KEY ("id")
@@ -317,6 +321,9 @@ CREATE UNIQUE INDEX "StudentAssignment_studentId_assignmentId_key" ON "StudentAs
 
 -- CreateIndex
 CREATE INDEX "TutorMessage_sessionId_createdAt_idx" ON "TutorMessage"("sessionId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "TutorSession_kind_userId_createdAt_idx" ON "TutorSession"("kind", "userId", "createdAt");
 
 -- CreateIndex
 CREATE INDEX "Feedback_targetType_targetId_idx" ON "Feedback"("targetType", "targetId");
