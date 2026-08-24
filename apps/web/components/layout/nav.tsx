@@ -38,6 +38,7 @@ export const STUDENT_NAV_SECONDARY = [
 export const TEACHER_NAV = [
   { href: "/teacher", icon: LayoutDashboard, label: "Дашборд" },
   { href: "/teacher/planner", icon: Sparkles, label: "ИИ-планировщик" },
+  { href: "/teacher/profile", icon: User, label: "Профиль" },
 ];
 
 export function StudentSidebar({ open, onClose }: { open?: boolean; onClose?: () => void }) {
@@ -55,10 +56,10 @@ export function StudentSidebar({ open, onClose }: { open?: boolean; onClose?: ()
         )}
       >
         <div className="flex h-16 items-center gap-2 px-5">
-          <span className="grid size-9 place-items-center rounded-md bg-primary text-lg font-black text-white">
+          <span className="grid size-9 place-items-center rounded-md bg-primary text-lg font-black text-white font-display">
             Z
           </span>
-          <span className="text-lg font-black tracking-tight text-primary">ZERTTE</span>
+          <span className="text-lg font-black tracking-tight text-primary font-display">ZERTTE</span>
           <button
             onClick={onClose}
             className="ml-auto grid size-8 place-items-center rounded-md text-text-3 hover:bg-surface-2 lg:hidden"
@@ -119,11 +120,11 @@ export function TeacherSidebar({ open, onClose }: { open?: boolean; onClose?: ()
         )}
       >
         <div className="flex h-16 items-center gap-2 px-5">
-          <span className="grid size-9 place-items-center rounded-md bg-text text-lg font-black text-white">
+          <span className="grid size-9 place-items-center rounded-md bg-text text-lg font-black text-white font-display">
             Z
           </span>
           <div className="leading-none">
-            <p className="text-base font-black">ZERTTE</p>
+            <p className="text-base font-black font-display">ZERTTE</p>
             <p className="text-[11px] font-medium text-text-3">Учитель</p>
           </div>
           <button

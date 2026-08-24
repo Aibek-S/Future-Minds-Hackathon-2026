@@ -1,7 +1,9 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarPlus, NotebookPen } from "lucide-react";
+import { CalendarPlus, Users, ClipboardList, AlertTriangle } from "lucide-react";
+import { motion } from "framer-motion";
+import { ZereAvatar } from "@/components/ai/zere";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/card";
@@ -41,25 +43,68 @@ export default function PlannerPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-3xl font-black">
-            <span className="grid size-10 place-items-center rounded-lg bg-gradient-to-br from-primary to-[#6366F1] text-white">
-              <NotebookPen className="size-5" />
-            </span>
-            ИИ-планировщик уроков
-          </h1>
-          <p className="mt-1 text-sm text-text-2">
-            Спросите «что делать на следующем уроке?» — ИИ проанализирует статистику класса.
-          </p>
+    <div className="mx-auto flex h-[calc(100dvh-10rem)] max-w-3xl flex-col lg:h-[calc(100dvh-8rem)]">
+      <motion.header
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative overflow-hidden rounded-xl border border-border bg-gradient-to-br from-primary-subtle via-surface to-surface p-5 shadow-card sm:p-6"
+      >
+        <div
+          className="pointer-events-none absolute -right-10 -top-14 size-44 rounded-full opacity-25 blur-2xl"
+          style={{ background: "radial-gradient(circle,#A78BFA,transparent)" }}
+          aria-hidden
+        />
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-4 sm:gap-5">
+            <motion.div initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+              <ZereAvatar size={96} mood="happy" float />
+            </motion.div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-black tracking-tight sm:text-3xl font-display">Zere AI</h1>
+                <span className="rounded-full bg-primary-light px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-primary">
+                  ИИ-планировщик
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-text-2">
+                Я изучила статистику вашего класса и готова предложить план следующего урока.
+              </p>
+            </div>
+          </div>
+
         </div>
+
+        <ul className="mt-4 grid gap-2 sm:grid-cols-3">
+          {[
+            { icon: <Users className="size-4" />, color: "#7C3AED", text: "Вижу уровень каждого ученика" },
+            { icon: <ClipboardList className="size-4" />, color: "#0EA5E9", text: "Соберу план урока по слабым темам" },
+            { icon: <AlertTriangle className="size-4" />, color: "#EF4444", text: "Найду тех, кто в зоне риска" },
+          ].map((f, i) => (
+            <motion.li
+              key={f.text}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.08 * i }}
+              className="flex items-center gap-2 rounded-lg bg-white/70 px-3 py-2 text-xs font-semibold text-text shadow-sm ring-1 ring-border"
+            >
+              <span className="grid size-7 shrink-0 place-items-center rounded-md text-white" style={{ background: f.color }}>
+                {f.icon}
+              </span>
+              {f.text}
+            </motion.li>
+          ))}
+        </ul>
+      </motion.header>
+
+      {/* Class selector (planner-specific, styled like tutor chips) */}
+      <div className="-mt-1">
         <select
           value={active}
           onChange={(e) => setClassId(e.target.value)}
-          className="h-11 rounded-md border-2 border-border px-3 text-sm font-bold focus:border-primary focus:outline-none"
+          aria-label="Класс"
+          className="h-10 rounded-full border-2 border-border bg-surface px-4 text-sm font-bold text-text-2 transition focus:border-primary focus:outline-none"
         >
-          <option value="">— класс —</option>
+          <option value="">— выберите класс —</option>
           {(classes.data ?? []).map((c) => (
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
@@ -97,7 +142,6 @@ export default function PlannerPage() {
       )}
 
       {/* Chat */}
-      <section className="rounded-xl border border-border bg-surface p-4 shadow-card sm:p-5">
         {!active ? (
           <p className="py-16 text-center text-sm text-text-3">Выберите класс, чтобы начать.</p>
         ) : (
@@ -115,7 +159,11 @@ export default function PlannerPage() {
             approving={approve.isPending}
           />
         )}
-      </section>
+
+      {/* Footer hint */}
+      <p className="flex items-center justify-center gap-1.5 pb-1 pt-1 text-center text-[11px] text-text-3">
+        <CalendarPlus className="size-3.5" /> Одобренный план Зере автоматически станет уроком в календаре класса
+      </p>
 
       {/* Approved result note */}
       {approve.isSuccess && (
@@ -149,10 +197,12 @@ function OrchestratorChat({
     <>
       <AiChatPanel
         key={classId}
+        className="min-h-0 flex-1 pt-3"
         scenario="orchestrator/chat"
         autoStartGreeting
-        greeting={`Привет! Я изучил статистику вашего класса. Спросите: «Что делать на следующем уроке?» или попросите план.`}
+        greeting={`Привет! Я Зере — изучила статистику вашего класса. Спросите: «Что делать на следующем уроке?»`}
         contextPrefix={`classId=${classId}`}
+        assistantAvatar={<ZereAvatar size={30} mood="thinking" />}
         quickPrompts={[
           "Что делать на следующем уроке?",
           "Кого из учеников стоит поддержать?",

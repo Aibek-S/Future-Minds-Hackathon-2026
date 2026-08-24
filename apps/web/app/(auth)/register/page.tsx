@@ -29,7 +29,11 @@ export default function RegisterPage() {
       router.replace(role === "TEACHER" ? "/teacher" : "/onboarding");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "";
-      setError(msg.includes("409") || /exists|занят/i.test(msg) ? "Этот email уже зарегистрирован." : "Не удалось создать аккаунт. Попробуйте ещё раз.");
+      setError(
+        msg.includes("409") || /exists|занят/i.test(msg)
+          ? "Этот email уже зарегистрирован."
+          : msg || "Не удалось создать аккаунт. Проверьте данные и попробуйте ещё раз.",
+      );
     }
   }
 
@@ -41,10 +45,10 @@ export default function RegisterPage() {
         animate={{ opacity: 1, y: 0 }}
       >
         <Link href="/" className="mb-8 flex items-center justify-center gap-3">
-          <span className="grid size-12 place-items-center rounded-xl bg-primary text-2xl font-black text-white shadow-pop">
+          <span className="grid size-12 place-items-center rounded-xl bg-primary text-2xl font-black text-white shadow-pop font-display">
             Z
           </span>
-          <span className="text-2xl font-black tracking-tight text-primary">ZERTTE</span>
+          <span className="text-2xl font-black tracking-tight text-primary font-display">ZERTTE</span>
         </Link>
 
         <div className="rounded-xl border border-border bg-surface p-6 shadow-card sm:p-8">
@@ -74,7 +78,7 @@ export default function RegisterPage() {
             <Field label="Имя" name="name" required placeholder="Алтаир" />
             <Field label="Электронная почта" name="email" type="email" required autoComplete="email" />
             {role === "STUDENT" && (
-              <Field label="Класс (7–12)" name="grade" type="number" min={7} max={9} defaultValue={9} required />
+              <Field label="Класс (7–12)" name="grade" type="number" min={7} max={12} defaultValue={9} required />
             )}
             <Field
               label="Пароль (от 8 символов)"

@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Nunito } from "next/font/google";
+import { Nunito, Comfortaa } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 
-// Rounded, friendly — closest free match to Duolingo's DIN Round. Full Cyrillic.
 const nunito = Nunito({ subsets: ["latin", "cyrillic"], variable: "--font-app" });
+const comfortaa = Comfortaa({ subsets: ["latin", "cyrillic"], weight: ["700", "800", "900"], variable: "--font-display" });
 
 export const metadata: Metadata = {
   title: "ZERTTE — адаптивное обучение с ИИ",

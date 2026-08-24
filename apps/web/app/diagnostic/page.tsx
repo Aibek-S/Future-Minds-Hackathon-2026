@@ -248,7 +248,7 @@ function DiagnosticResultScreen({
         <p className="text-center text-sm font-bold uppercase tracking-[0.2em] text-primary">
           Ваш профиль знаний
         </p>
-        <h1 className="mt-2 text-center text-3xl font-black">Что мы выяснили</h1>
+        <h1 className="text-center text-3xl font-black font-display">Что мы выяснили</h1>
 
         <div className="mt-8 space-y-4 rounded-xl border border-border bg-surface p-6 shadow-card">
           {state.length === 0 && (

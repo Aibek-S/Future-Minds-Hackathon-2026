@@ -54,7 +54,7 @@ export default function TutorPage() {
           </motion.div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Zere</h1>
+              <h1 className="text-2xl font-black tracking-tight sm:text-3xl font-display">Zere AI</h1>
               <span className="rounded-full bg-primary-light px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-primary">
                 ИИ-наставник
               </span>
