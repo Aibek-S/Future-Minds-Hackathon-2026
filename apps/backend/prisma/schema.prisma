@@ -56,6 +56,12 @@ enum VoiceFeedbackStatus {
   FAILED
 }
 
+enum MaterialIngestionStatus {
+  VECTORIZING
+  COMPLETED
+  FAILED
+}
+
 enum SessionKind {
   STUDENT_CHAT
   DIAGNOSTIC
@@ -168,6 +174,7 @@ model Topic {
   tasks           Task[]
   knowledge       StudentKnowledge[]
   materialsVector MaterialVector[]
+  materialIngestions MaterialIngestion[]
   mistakes        Mistake[]
   assignments     Assignment[]
   lessons         Lesson[]
@@ -187,6 +194,21 @@ model MaterialVector {
   createdAt DateTime @default(now())
 
   @@index([topicId])
+}
+
+model MaterialIngestion {
+  id               String                  @id @default(cuid())
+  topicId          String
+  topic            Topic                   @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  content          String
+  sourceUrl        String?
+  status           MaterialIngestionStatus @default(VECTORIZING)
+  materialVectorId String?
+  error            String?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+
+  @@index([topicId, status])
 }
 
 model Task {

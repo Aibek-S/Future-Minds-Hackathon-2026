@@ -37,6 +37,13 @@ export class TopicsController {
     return this.topicsService.addMaterial(id, { ...dto, content, sourceUrl: dto.sourceUrl ?? (file ? file.originalname : undefined) });
   }
 
+  @Get(':id/materials/:materialId')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('TEACHER', 'ADMIN')
+  getMaterialStatus(@Param('id') id: string, @Param('materialId') materialId: string) {
+    return this.topicsService.getMaterialStatus(id, materialId);
+  }
+
   @Put(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('TEACHER', 'ADMIN')
