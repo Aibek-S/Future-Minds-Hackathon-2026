@@ -59,7 +59,7 @@ export class AiToolsService {
     }
   }
 
-  private async searchMaterials(args: Record<string, unknown>) {
+  async searchMaterials(args: { query?: unknown; topicId?: unknown }) {
     const query = typeof args.query === 'string' ? args.query.trim() : '';
     const topicId = typeof args.topicId === 'string' ? args.topicId : undefined;
     if (!query) return { error: 'query must be a non-empty string' };

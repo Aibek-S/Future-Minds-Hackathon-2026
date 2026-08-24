@@ -1,4 +1,4 @@
-import { Controller, Delete, Get, Param, Post, Put, Body, Query, UploadedFile, UseGuards, UseInterceptors, BadRequestException } from '@nestjs/common';
+import { Controller, Delete, Get, Param, Post, Put, Body, Query, UploadedFile, UseGuards, UseInterceptors, BadRequestException, HttpCode, HttpStatus } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -27,6 +27,7 @@ export class TopicsController {
   }
 
   @Post(':id/materials')
+  @HttpCode(HttpStatus.ACCEPTED)
   @UseInterceptors(FileInterceptor('file'))
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('TEACHER', 'ADMIN')

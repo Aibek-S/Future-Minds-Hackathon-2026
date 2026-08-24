@@ -638,6 +638,20 @@ curl -X POST /v1/voice-feedback \
 // Response 202 — { "materialId": "mv_1", "status": "vectorizing" }
 ```
 
+### `GET /materials/search` — семантический поиск по материалам
+
+```http
+GET /v1/materials/search?query=теорема%20Пифагора&topicId=topic_1
+Authorization: Bearer <jwt>
+
+// Response 200
+{
+  "materials": [{ "id": "mv_1", "topicId": "topic_1", "content": "...", "similarity": 0.87 }],
+  "fallbackToGeneralKnowledge": false,
+  "similarityThreshold": 0.65
+}
+```
+
 ### `POST /topics/:id/tasks` — добавить задание (см. раздел 3)
 
 ---
