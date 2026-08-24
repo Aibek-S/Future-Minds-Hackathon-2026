@@ -6,6 +6,11 @@ export class CreateMaterialDto {
   @IsOptional() @IsUrl() sourceUrl?: string;
 }
 
+export class SearchMaterialsDto {
+  @IsString() @MinLength(1) @MaxLength(2000) query: string;
+  @IsOptional() @IsString() topicId?: string;
+}
+
 export class CreateTopicDto {
   @ApiProperty({ example: 'Тригонометрия' })
   @IsString()
