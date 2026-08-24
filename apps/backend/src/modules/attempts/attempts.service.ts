@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateAttemptDto } from './dto/attempt.dto';
 import { AnswerCheckerService } from './answer-checker.service';
+import { RealtimeGateway } from '../realtime/realtime.gateway';
 
 const PREREQUISITE_MASTERY = 0.4;
 const DIFFICULTIES = ['easy', 'medium', 'hard'] as const;
@@ -14,6 +15,7 @@ export class AttemptsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly answerChecker: AnswerCheckerService,
+    private readonly realtime: RealtimeGateway,
   ) {}
 
   async create(taskId: string, studentId: string, dto: CreateAttemptDto, requester: Requester) {
@@ -76,6 +78,9 @@ export class AttemptsService {
       result.masteryBefore,
       result.masteryAfter,
     );
+    const payload = { studentId, topicId: task.topicId, correct: answerCheck.correct, masteryAfter: result.masteryAfter };
+    this.realtime.emitTaskAttemptSubmitted(payload);
+    this.realtime.emitKnowledgeStateUpdated({ ...payload, timestamp: new Date().toISOString() });
     return {
       correct: answerCheck.correct,
       feedback: answerCheck.feedback,

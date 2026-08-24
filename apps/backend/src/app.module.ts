@@ -19,6 +19,7 @@ import { DiagnosticModule } from './modules/diagnostic/diagnostic.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { VoiceFeedbackModule } from './modules/voice-feedback/voice-feedback.module';
+import { RealtimeModule } from './modules/realtime/realtime.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { VoiceFeedbackModule } from './modules/voice-feedback/voice-feedback.mod
     FeedbackModule,
     NotificationsModule,
     VoiceFeedbackModule,
+    RealtimeModule,
   ],
 })
 export class AppModule {}
