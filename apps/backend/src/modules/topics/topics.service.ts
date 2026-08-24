@@ -2,10 +2,23 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateTopicDto, UpdateTopicDto } from './dto/topic.dto';
 import { CreateTaskDto, TASK_DIFFICULTIES, UpdateTaskDto } from './dto/task.dto';
+import { CreateMaterialDto } from './dto/topic.dto';
+import { EmbeddingsService } from '../../ai/embeddings.service';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class TopicsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly embeddings: EmbeddingsService) {}
+
+  async addMaterial(topicId: string, dto: CreateMaterialDto) {
+    await this.ensureTopic(topicId);
+    const chunks = this.chunkText(dto.content);
+    for (const content of chunks) {
+      const embedding = `[${(await this.embeddings.embed(content)).join(',')}]`;
+      await this.prisma.$executeRaw`INSERT INTO "MaterialVector" (id, "topicId", content, metadata, embedding) VALUES (${randomUUID()}, ${topicId}, ${content}, ${JSON.stringify({ sourceUrl: dto.sourceUrl ?? null, chunkCount: chunks.length })}::jsonb, ${embedding}::vector)`;
+    }
+    return { status: 'ready', chunks: chunks.length };
+  }
 
   async listTopics(subjectId?: string) {
     const topics = await this.prisma.topic.findMany({
@@ -107,6 +120,13 @@ export class TopicsService {
     if (!subject) {
       throw new NotFoundException('Subject not found');
     }
+  }
+
+  private chunkText(content: string) {
+    const max = 1200;
+    const chunks: string[] = [];
+    for (let start = 0; start < content.length; start += max) chunks.push(content.slice(start, start + max));
+    return chunks;
   }
 
   private async ensureTopic(id: string) {

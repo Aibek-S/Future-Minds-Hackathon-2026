@@ -3,7 +3,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
-import { CreateTopicDto, UpdateTopicDto } from './dto/topic.dto';
+import { CreateMaterialDto, CreateTopicDto, UpdateTopicDto } from './dto/topic.dto';
 import { TopicsService } from './topics.service';
 
 @ApiTags('Topics')
@@ -23,6 +23,14 @@ export class TopicsController {
   @ApiBearerAuth()
   create(@Body() dto: CreateTopicDto) {
     return this.topicsService.createTopic(dto);
+  }
+
+  @Post(':id/materials')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('TEACHER', 'ADMIN')
+  @ApiBearerAuth()
+  addMaterial(@Param('id') id: string, @Body() dto: CreateMaterialDto) {
+    return this.topicsService.addMaterial(id, dto);
   }
 
   @Put(':id')
