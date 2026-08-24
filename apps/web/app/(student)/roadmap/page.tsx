@@ -50,6 +50,13 @@ export default function RoadmapPage() {
   const loading =
     !studentId || subjects.isLoading || topics.isLoading || knowledge.isLoading || roadmap.isLoading;
 
+  const loadError = topics.isError || knowledge.isError || roadmap.isError;
+  function retryAll() {
+    void topics.refetch();
+    void knowledge.refetch();
+    void roadmap.refetch();
+  }
+
   const nodes =
     !loading && topics.data && knowledge.data && roadmap.data
       ? buildTree(topics.data, knowledge.data, roadmap.data)
@@ -83,6 +90,12 @@ export default function RoadmapPage() {
 
       {loading ? (
         <TreeSkeleton />
+      ) : loadError ? (
+        <ErrorState
+          title="Не удалось загрузить карту знаний"
+          body="Проверьте подключение к серверу и попробуйте ещё раз."
+          onRetry={retryAll}
+        />
       ) : (subjects.data ?? []).length === 0 ? (
         <EmptyState
           emoji="🗺"

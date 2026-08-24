@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { useState } from "react";
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, Tooltip as ChartTooltip } from "recharts";
 import { MasteryBar } from "@/components/ui/progress";
 import { CardSkeleton, EmptyState } from "@/components/ui/states";
 import { studentsService } from "@/lib/services/students";
@@ -61,6 +62,22 @@ export default function ProgressPage() {
       {/* By subject */}
       <section>
         <h3 className="mb-3 text-lg font-black">По предметам</h3>
+        <div className="mb-4 rounded-xl border border-border bg-surface p-5 shadow-card">
+          <div className="h-44 w-full" role="img" aria-label="График мастерства по предметам">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={(subjects.data ?? []).map((s, i) => ({ name: s.name.split(",")[0], value: Math.round(s.avgMastery * 100), fill: subjectTheme(s.id, i).accent }))} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
+                <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 700, fill: "#64748B" }} axisLine={false} tickLine={false} />
+                <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: "#94A3B8" }} axisLine={false} tickLine={false} />
+                <ChartTooltip cursor={{ fill: "rgba(124,58,237,0.06)" }} formatter={(v) => [`${v}%`, "Мастерство"]} />
+                <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={56}>
+                  {(subjects.data ?? []).map((s, i) => (
+                    <Cell key={s.id} fill={subjectTheme(s.id, i).accent} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
         <div className="space-y-4 rounded-xl border border-border bg-surface p-5 shadow-card">
           {(subjects.data ?? []).map((s, i) => {
             const t = subjectTheme(s.id, i);

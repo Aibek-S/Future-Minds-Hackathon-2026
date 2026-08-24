@@ -21,6 +21,16 @@ import { RequireAuth } from "@/components/system/require-auth";
 
 type Phase = "question" | "correct" | "wrong" | "finish";
 
+/** Fisher–Yates: randomized combinations of tasks per spec §33. */
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 function LessonPage() {
   const router = useRouter();
   const qc = useQueryClient();
@@ -49,13 +59,14 @@ function LessonPage() {
   });
 
   if (initialTasks.data && loadedDiff === null && queue.length === 0) {
-    setQueue(initialTasks.data);
+    setQueue(shuffle(initialTasks.data));
     setLoadedDiff("easy");
   }
 
   async function refill(difficulty: Difficulty) {
     const more = await topicsService.tasks(topicId, difficulty);
-    setQueue((q) => [...q, ...more.filter((m) => !q.some((e) => e.id === m.id))]);
+    const fresh = more.filter((m) => !queue.some((e) => e.id === m.id));
+    setQueue((q) => [...q, ...shuffle(fresh)]);
     setLoadedDiff(difficulty);
   }
 

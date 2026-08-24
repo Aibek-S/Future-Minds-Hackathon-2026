@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AppHeader } from "@/components/layout/header";
 import { StudentBottomNav, StudentSidebar } from "@/components/layout/nav";
 import { RequireAuth } from "@/components/system/require-auth";
+import { NotificationToasts } from "@/components/system/notification-toasts";
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -16,6 +17,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
           <main className="mx-auto max-w-6xl px-4 pb-28 pt-6 lg:pb-12">{children}</main>
         </div>
         <StudentBottomNav />
+        <NotificationToasts />
       </div>
     </RequireAuth>
   );

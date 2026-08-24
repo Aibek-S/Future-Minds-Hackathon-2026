@@ -133,16 +133,64 @@ function OverviewTab({
 function HeatmapTab({ classId }: { classId: string }) {
   const heatmap = useQuery({ queryKey: ["heatmap", classId], queryFn: () => teacherService.heatmap(classId) });
   const [studentId, setStudentId] = useState<string | null>(null);
+  const [topicId, setTopicId] = useState<string | null>(null);
   return (
     <>
       {heatmap.isError ? (
         <ErrorState onRetry={() => void heatmap.refetch()} />
       ) : (
-        <Heatmap data={heatmap.data} onStudentClick={(id) => setStudentId(id)} />
+        <Heatmap data={heatmap.data} onStudentClick={(id) => setStudentId(id)} onTopicClick={(id) => setTopicId(id)} />
       )}
+
+      {/* Class performance for a single topic (from the same heatmap payload) */}
+      <Modal open={!!topicId} onClose={() => setTopicId(null)} title="Тема в классе">
+        {(() => {
+          const topic = heatmap.data?.topics?.find((t) => t.id === topicId);
+          if (!heatmap.data || !topic) return <TableSkeleton rows={3} />;
+          const rows = (heatmap.data.students ?? [])
+            .map((s) => ({ name: s.studentName, id: s.studentId, cell: s.topics?.find((x) => x.topicId === topicId) }))
+            .filter((r) => r.cell != null)
+            .sort((a, b) => (a.cell!.mastery ?? 0) - (b.cell!.mastery ?? 0));
+          const avg = rows.length ? rows.reduce((acc, r) => acc + (r.cell!.mastery ?? 0), 0) / rows.length : 0;
+          const struggling = rows.filter((r) => (r.cell!.mastery ?? 0) < 0.4).length;
+          return (
+            <div className="space-y-5">
+              <div>
+                <p className="text-lg font-black">{topic.name}</p>
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <MetricCard value={`${Math.round(avg * 100)}%`} label="Среднее по теме" accent={avg >= 0.7 ? "#10B981" : avg >= 0.4 ? "#F59E0B" : "#EF4444"} />
+                  <MetricCard value={struggling} label="Ниже 40%" accent="#EF4444" />
+                </div>
+              </div>
+              <ul className="space-y-2">
+                {rows.map((r) => {
+                  const m = r.cell!.mastery;
+                  const st = heat_status(m);
+                  return (
+                    <li key={r.id} className="flex items-center gap-3">
+                      <span className="w-28 truncate text-sm font-bold">{r.name}</span>
+                      <MasteryBar mastery={m} color={st === "GREEN" ? "#10B981" : st === "YELLOW" ? "#F59E0B" : "#EF4444"} showLabel={false} size="sm" />
+                      <span className="w-10 text-right text-xs font-extrabold text-text-2">{Math.round(m * 100)}%</span>
+                    </li>
+                  );
+                })}
+                {rows.length === 0 && <p className="text-sm text-text-3">Нет данных по теме.</p>}
+              </ul>
+            </div>
+          );
+        })()}
+      </Modal>
+
       <StudentProfileModal studentId={studentId} onClose={() => setStudentId(null)} />
     </>
   );
+}
+
+/** local alias to avoid clashing with the type import below */
+function heat_status(m: number): "GREEN" | "YELLOW" | "RED" {
+  if (m >= 0.7) return "GREEN";
+  if (m >= 0.4) return "YELLOW";
+  return "RED";
 }
 
 function StudentsTab({ classId }: { classId: string }) {
@@ -155,10 +203,29 @@ function StudentsTab({ classId }: { classId: string }) {
     enabled: !!selected,
   });
 
+  const studentIds = (students.data ?? []).map((s) => s.id).join(",");
+  // Weakest topic per student for the table column (parallel profile fetches).
+  const profiles = useQuery({
+    queryKey: ["student-profiles", studentIds],
+    queryFn: async () => {
+      const ids = studentIds ? studentIds.split(",") : [];
+      const entries = await Promise.all(
+        ids.map(async (id) => [id, await teacherService.studentProfile(id)] as const),
+      );
+      return Object.fromEntries(entries) as Record<string, Awaited<ReturnType<typeof teacherService.studentProfile>>>;
+    },
+    enabled: ids_count(studentIds) > 0,
+    staleTime: 60_000,
+  });
+  const weakByStudent = Object.fromEntries(
+    Object.entries(profiles.data ?? {}).map(([id, p]) => [id, p.weakTopics?.[0] ?? "—"]),
+  );
+
   const remove = useMutation({
     mutationFn: (sid: string) => classesService.removeStudent(classId, sid).then(() => undefined),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["class-students", classId] });
+      void qc.invalidateQueries({ queryKey: ["student-profiles"] });
     },
   });
 
@@ -167,6 +234,7 @@ function StudentsTab({ classId }: { classId: string }) {
       {!students.isLoading ? (
         <StudentTable
           students={students.data ?? []}
+          weakByStudent={weakByStudent}
           onRowClick={(s) => setSelected(s)}
         />
       ) : (
@@ -215,6 +283,10 @@ function StudentsTab({ classId }: { classId: string }) {
                 <p className="text-sm text-text-3">Нет данных.</p>
               )}
             </div>
+
+            {/* Recent attempts history — real backend data */}
+            <AttemptsHistory classId={classId} studentId={selected!.id} />
+
             <Button
               variant="danger"
               fullWidth
@@ -228,6 +300,52 @@ function StudentsTab({ classId }: { classId: string }) {
       </Modal>
     </>
   );
+}
+
+function AttemptsHistory({ classId, studentId }: { classId: string; studentId: string }) {
+  const attempts = useQuery({
+    queryKey: ["student-attempts", classId, studentId],
+    queryFn: () => teacherService.studentAttempts(classId, studentId),
+    staleTime: 30_000,
+  });
+
+  return (
+    <div>
+      <p className="mb-2 text-xs font-black uppercase tracking-widest text-text-3">Последняя активность</p>
+      {attempts.isLoading ? (
+        <TableSkeleton rows={2} />
+      ) : (attempts.data ?? []).length === 0 ? (
+        <p className="text-sm text-text-3">Попыток пока нет.</p>
+      ) : (
+        <ul className="scroll-thin max-h-56 space-y-1.5 overflow-y-auto pr-1">
+          {(attempts.data ?? []).slice(0, 8).map((a) => (
+            <li
+              key={a.id}
+              className={`flex items-start gap-2 rounded-md px-3 py-2 text-sm ${
+                a.correct ? "bg-[#F0FDF4]" : "bg-[#FEF2F2]"
+              }`}
+            >
+              <span className={`mt-0.5 font-black ${a.correct ? "text-success" : "text-error"}`}>
+                {a.correct ? "✓" : "✕"}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-semibold">{a.topicName ?? a.topicId}</span>
+                <span className="block truncate text-xs text-text-3">
+                  попытка {a.attemptNumber} · {new Date(a.createdAt).toLocaleDateString("ru-RU")}
+                  {a.answer && ` · «${a.answer.slice(0, 24)}${a.answer.length > 24 ? "…" : ""}»`}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** tiny helper so the enabled expression stays readable */
+function ids_count(joined: string): number {
+  return joined ? joined.split(",").length : 0;
 }
 
 function LessonsTab({ classId }: { classId: string }) {

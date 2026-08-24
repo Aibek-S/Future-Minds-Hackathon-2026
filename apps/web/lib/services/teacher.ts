@@ -34,6 +34,29 @@ export const teacherService = {
     return api.get<TeacherStudentProfile>(`/students/${studentId}/profile`);
   },
 
+  /** GET /classes/:id/students/:sid/attempts — recent attempt history. */
+  async studentAttempts(
+    classId: string,
+    studentId: string,
+  ): Promise<
+    Array<{
+      id: string;
+      taskId: string;
+      topicId: string;
+      topicName?: string;
+      answer: string;
+      correct: boolean;
+      attemptNumber: number;
+      createdAt: string;
+    }>
+  > {
+    const r = await api.get<{ attempts?: Array<Record<string, unknown>> } | Array<Record<string, unknown>>>(
+      `/classes/${classId}/students/${studentId}/attempts`,
+    );
+    const list = Array.isArray(r) ? r : (r.attempts ?? []);
+    return list as never;
+  },
+
   askOrchestrator(teacherId: string, classId: string, question: string): Promise<OrchestratorAnswer> {
     return api.post<OrchestratorAnswer>("/orchestrator/query", { teacherId, classId, question });
   },
