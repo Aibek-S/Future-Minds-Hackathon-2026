@@ -106,6 +106,10 @@ export class ChatService {
     return { sessionId: session.id, stream };
   }
 
+  async saveStudentMessage(sessionId: string, content: string) {
+    await this.prisma.tutorMessage.create({ data: { sessionId, role: 'user', content } });
+  }
+
   async saveAssistantMessage(sessionId: string, content: string, widget?: unknown) {
     await this.prisma.tutorMessage.create({
       data: {
