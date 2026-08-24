@@ -12,7 +12,7 @@ export class DemoInterceptor implements NestInterceptor {
     if (!request.headers['x-demo-user'] || request.method !== 'POST' || !request.originalUrl.includes('/orchestrator/query')) return next.handle();
     const key = `demo:orchestrator:${createHash('sha256').update(JSON.stringify(request.body ?? {})).digest('hex')}`;
     return from(this.cache.getCache(key)).pipe(mergeMap((cached) => {
-      if (cached) return of(JSON.parse(cached));
+      if (cached) return from(new Promise((resolve) => setTimeout(resolve, 350))).pipe(mergeMap(() => of(JSON.parse(cached))));
       return next.handle().pipe(mergeMap(async (value) => { await this.cache.setCache(key, JSON.stringify(value)); return value; }));
     }));
   }

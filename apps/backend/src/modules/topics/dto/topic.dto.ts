@@ -2,7 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsArray, IsOptional, IsString, IsUrl, MaxLength, MinLength } from 'class-validator';
 
 export class CreateMaterialDto {
-  @IsString() @MinLength(1) @MaxLength(100000) content: string;
+  @IsOptional() @IsString() @MinLength(1) @MaxLength(100000) content?: string;
   @IsOptional() @IsUrl() sourceUrl?: string;
 }
 
