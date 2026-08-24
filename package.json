@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
+    "build:backend": "cd apps/backend && npm run build",
     "db:generate": "turbo run db:generate",
     "db:push": "turbo run db:push",
     "db:migrate": "turbo run db:migrate",
