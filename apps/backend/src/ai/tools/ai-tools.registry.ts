@@ -10,12 +10,18 @@ export const TOOL_GET_ROADMAP = 'get_roadmap';
 export const TOOL_UPDATE_STUDENT_PROFILE = 'update_student_profile';
 export const TOOL_INITIALIZE_STUDENT_KNOWLEDGE = 'initialize_student_knowledge';
 export const TOOL_GET_CLASS_OVERVIEW = 'get_class_overview';
+export const TOOL_SEARCH_MATERIALS = 'search_materials';
 
 /**
  * Function-calling tool schemas exposed to the LLM (OpenAI `tools` format).
  * Only used when the caller enables tools for a given task.
  */
 export const AI_TOOL_DEFINITIONS: AiToolDefinition[] = [
+  {
+    name: TOOL_SEARCH_MATERIALS,
+    description: 'Ищет семантически близкие учебные материалы. topicId необязателен и ограничивает поиск одной темой.',
+    parameters: { type: 'object', properties: { query: { type: 'string' }, topicId: { type: 'string' } }, required: ['query'], additionalProperties: false },
+  },
   {
     name: TOOL_GET_KNOWLEDGE_STATE,
     description:

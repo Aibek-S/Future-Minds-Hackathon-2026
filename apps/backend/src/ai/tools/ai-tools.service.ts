@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EmbeddingsService } from '../embeddings.service';
+import { Prisma } from '@prisma/client';
 
 const COMPLETED_MASTERY = 0.8;
 const PREREQUISITE_MASTERY = 0.4;
@@ -14,11 +16,13 @@ export interface ToolExecutionContext {
 export class AiToolsService {
   private readonly logger = new Logger(AiToolsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly embeddings: EmbeddingsService) {}
 
   /** Executes a named tool. Returns a string-safe payload for the LLM. */
   async execute(name: string, args: Record<string, unknown>, context: ToolExecutionContext): Promise<string> {
     switch (name) {
+      case 'search_materials':
+        return this.stringify(await this.searchMaterials(args));
       case 'get_knowledge_state':
         return this.stringify(
           context.studentId
@@ -52,6 +56,18 @@ export class AiToolsService {
       default:
         return JSON.stringify({ error: `Unknown tool: ${name}` });
     }
+  }
+
+  private async searchMaterials(args: Record<string, unknown>) {
+    const query = typeof args.query === 'string' ? args.query.trim() : '';
+    const topicId = typeof args.topicId === 'string' ? args.topicId : undefined;
+    if (!query) return { error: 'query must be a non-empty string' };
+    const vector = `[${(await this.embeddings.embed(query)).join(',')}]`;
+    const filter = topicId ? Prisma.sql`WHERE "topicId" = ${topicId}` : Prisma.empty;
+    const rows = await this.prisma.$queryRaw<Array<{ id: string; topicId: string; content: string; metadata: unknown; similarity: number }>>`
+      SELECT id, "topicId", content, metadata, 1 - (embedding <=> ${vector}::vector) AS similarity
+      FROM "MaterialVector" ${filter} ORDER BY embedding <=> ${vector}::vector LIMIT 5`;
+    return { materials: rows.map((row) => ({ ...row, similarity: Number(row.similarity) })) };
   }
 
   private async getClassOverview(classId: string) {
