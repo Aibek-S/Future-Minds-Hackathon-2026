@@ -40,3 +40,5 @@ prisma/migrations/.migration_lock.toml
 # Docker
 docker-compose.override.yml
 .next/
+uploads/
+.worktrees/
