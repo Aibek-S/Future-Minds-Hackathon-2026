@@ -1,5 +1,6 @@
 import { AiToolsService } from './ai-tools.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EmbeddingsService } from '../embeddings.service';
 
 describe('AiToolsService', () => {
   let prisma: {
@@ -17,7 +18,7 @@ describe('AiToolsService', () => {
       student: { update: jest.fn() },
       studentKnowledge: { createMany: jest.fn() },
     };
-    service = new AiToolsService(prisma as unknown as PrismaService);
+    service = new AiToolsService(prisma as unknown as PrismaService, {} as EmbeddingsService);
   });
 
   it('returns knowledge state with prerequisite flags', async () => {

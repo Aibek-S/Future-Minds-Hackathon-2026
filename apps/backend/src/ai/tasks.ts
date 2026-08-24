@@ -10,6 +10,7 @@ import {
   TOOL_UPDATE_STUDENT_PROFILE,
   TOOL_INITIALIZE_STUDENT_KNOWLEDGE,
   TOOL_GET_CLASS_OVERVIEW,
+  TOOL_SEARCH_MATERIALS,
 } from './tools/ai-tools.registry';
 import { SessionKind } from '@prisma/client';
 
@@ -31,6 +32,7 @@ export const AI_TASKS: Record<AiTask, AiTaskConfig> = {
       TOOL_GET_SUBJECT_SUMMARY,
       TOOL_GET_ROADMAP,
       TOOL_UPDATE_STUDENT_PROFILE,
+      TOOL_SEARCH_MATERIALS,
     ],
     widgets: true,
     widgetLimit: 3,
