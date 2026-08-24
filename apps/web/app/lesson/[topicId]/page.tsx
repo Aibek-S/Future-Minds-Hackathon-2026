@@ -16,6 +16,7 @@ import { studentsService } from "@/lib/services/students";
 import { tasksService } from "@/lib/services/tasks";
 import { topicsService } from "@/lib/services/topics";
 import { useMe } from "@/lib/hooks/use-auth";
+import { useAttemptedTasks, isFresh } from "@/lib/stores/attempted-tasks";
 import type { AttemptResult, Difficulty } from "@/lib/types";
 import { RequireAuth } from "@/components/system/require-auth";
 
@@ -52,6 +53,13 @@ function LessonPage() {
   // Task queue: start easy; adaptive difficulty follows backend nextTaskDifficulty.
   const [queue, setQueue] = useState<Array<{ id: string; difficulty: Difficulty; content: string }>>([]);
   const [loadedDiff, setLoadedDiff] = useState<Difficulty | null>(null);
+  const attempted = useAttemptedTasks((s) => s.items);
+  const markAttempted = useAttemptedTasks((s) => s.markAttempted);
+
+  /** Fresh (never-attempted) tasks first — they reward mastery ×1.0. */
+  function prioritize<T extends { id: string }>(tasks: T[]): T[] {
+    return [...tasks].sort((a, b) => Number(isFresh(attempted, b.id)) - Number(isFresh(attempted, a.id)));
+  }
 
   const initialTasks = useQuery({
     queryKey: ["tasks", topicId, "easy"],
@@ -59,14 +67,14 @@ function LessonPage() {
   });
 
   if (initialTasks.data && loadedDiff === null && queue.length === 0) {
-    setQueue(shuffle(initialTasks.data));
+    setQueue(prioritize(shuffle(initialTasks.data)));
     setLoadedDiff("easy");
   }
 
   async function refill(difficulty: Difficulty) {
     const more = await topicsService.tasks(topicId, difficulty);
     const fresh = more.filter((m) => !queue.some((e) => e.id === m.id));
-    setQueue((q) => [...q, ...shuffle(fresh)]);
+    setQueue((q) => [...q, ...prioritize(shuffle(fresh))]);
     setLoadedDiff(difficulty);
   }
 
@@ -92,6 +100,7 @@ function LessonPage() {
     try {
       const res = await tasksService.attempt(current.id, studentId, answer.trim());
       setResult(res);
+      markAttempted(current.id);
       setStats((s) => ({ correct: s.correct + (res.correct ? 1 : 0), answered: s.answered + 1 }));
       if (res.correct) {
         setPhase("correct");

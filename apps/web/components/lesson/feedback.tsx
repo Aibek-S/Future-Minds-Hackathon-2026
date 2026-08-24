@@ -226,6 +226,7 @@ export function LessonFinish({
 }) {
   const [confetti, setConfetti] = useState(true);
   const [voiceState, setVoiceState] = useState<"idle" | "recording" | "uploading" | "done" | "error">("idle");
+  const [voiceError, setVoiceError] = useState<string | null>(null);
   const [transcript, setTranscript] = useState<string | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -235,7 +236,34 @@ export function LessonFinish({
     return () => clearTimeout(t);
   }, []);
 
+  function describeMicError(err: unknown): string {
+    const name = (err as DOMException)?.name ?? "";
+    switch (name) {
+      case "NotAllowedError":
+      case "SecurityError":
+        return "Доступ к микрофону запрещён. Нажми на замок 🔒 в адресной строке → «Микрофон» → «Разрешить» и попробуй снова.";
+      case "NotFoundError":
+      case "OverconstrainedError":
+        return "Микрофон не найден. Проверь, что устройство записи подключено и выбрано в системе.";
+      case "NotReadableError":
+        return "Микрофон занят другим приложением (Zoom, Meet и т.п.). Закрой его и попробуй снова.";
+      case "AbortError":
+        return "Запись была прервана системой. Попробуй ещё раз.";
+      default:
+        return `Не удалось начать запись (${name || "неизвестная ошибка"}). Попробуй ещё раз.`;
+    }
+  }
+
   async function startRecording() {
+    setVoiceError(null);
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      // http://<LAN-IP> is NOT a secure context — browsers hide mic API there.
+      setVoiceError(
+        "Запись работает только на localhost или по HTTPS. Открой сайт через http://localhost:3001 или через https-туннель.",
+      );
+      setVoiceState("error");
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const rec = new MediaRecorder(stream);
@@ -255,14 +283,16 @@ export function LessonFinish({
           const res = await voiceService.pollUntilDone(up.feedbackId);
           setTranscript(res.transcript ?? null);
           setVoiceState("done");
-        } catch {
+        } catch (e) {
+          setVoiceError(describeMicError(e));
           setVoiceState("error");
         }
       };
       rec.start();
       recorderRef.current = rec;
       setVoiceState("recording");
-    } catch {
+    } catch (e) {
+      setVoiceError(describeMicError(e));
       setVoiceState("error");
     }
   }
@@ -322,8 +352,8 @@ export function LessonFinish({
             {transcript && <p className="mt-1 text-sm italic text-text">«{transcript}»</p>}
           </div>
         )}
-        {voiceState === "error" && (
-          <p className="mt-3 text-sm text-error">Не удалось записать аудио. Разрешите доступ к микрофону.</p>
+        {voiceState === "error" && voiceError && (
+          <p className="mt-3 rounded-md bg-[#FEF2F2] p-3 text-sm text-error">{voiceError}</p>
         )}
       </div>
 
