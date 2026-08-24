@@ -15,6 +15,18 @@ const DIFF_COLOR: Record<Difficulty, string> = {
   hard: "#EF4444",
 };
 
+/** Backend returns { topicId, topicName }[]; tolerate plain strings too. */
+export function unlockedLabels(list: AttemptResult["prerequisiteUnlocked"] | string[] | undefined): string[] {
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((item) => {
+      if (typeof item === "string") return item;
+      const obj = item as Partial<{ topicName: string; name: string; topicId: string; id: string }>;
+      return obj?.topicName ?? obj?.name ?? obj?.topicId ?? obj?.id ?? "";
+    })
+    .filter(Boolean);
+}
+
 /** Correct answer feedback with real masteryBefore→masteryAfter animation. */
 export function AnswerFeedback({
   result,
@@ -107,7 +119,7 @@ export function AnswerFeedback({
             </span>
             <div>
               <p className="text-xs font-black uppercase tracking-wide text-primary">Новая тема открыта!</p>
-              <p className="font-bold">{unlockedNames?.join(", ") || result.prerequisiteUnlocked.join(", ")}</p>
+              <p className="font-bold">{unlockedLabels(unlockedNames).join(", ") || unlockedLabels(result.prerequisiteUnlocked).join(", ")}</p>
             </div>
           </motion.div>
         )}

@@ -11,7 +11,7 @@ import { ProgressBar } from "@/components/ui/progress";
 import { Modal } from "@/components/ui/modal";
 import { Skeleton } from "@/components/ui/states";
 import { QuestionRenderer, AskAiPanel } from "@/components/lesson/question";
-import { AnswerFeedback, MistakeFeedback, LessonFinish, difficultyLabel } from "@/components/lesson/feedback";
+import { AnswerFeedback, MistakeFeedback, LessonFinish, difficultyLabel, unlockedLabels } from "@/components/lesson/feedback";
 import { studentsService } from "@/lib/services/students";
 import { tasksService } from "@/lib/services/tasks";
 import { topicsService } from "@/lib/services/topics";
@@ -95,6 +95,7 @@ function LessonPage() {
       setStats((s) => ({ correct: s.correct + (res.correct ? 1 : 0), answered: s.answered + 1 }));
       if (res.correct) {
         setPhase("correct");
+        setUnlockedNames(unlockedLabels(res.prerequisiteUnlocked));
         // Adaptive difficulty → prefetch next level
         const d = res.nextTaskDifficulty;
         if (d !== loadedDiff && index + 2 >= queue.length) void refill(d);

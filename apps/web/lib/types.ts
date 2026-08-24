@@ -156,8 +156,8 @@ export interface AttemptResult {
   mistakeType: MistakeType | null;
   updatedMastery: UpdatedMastery;
   nextTaskDifficulty: Difficulty;
-  /** Topic ids or names unlocked by this attempt. */
-  prerequisiteUnlocked: string[];
+  /** Newly unlocked topics as returned by the backend: { topicId, topicName }. */
+  prerequisiteUnlocked: Array<{ topicId: string; topicName: string }>;
 }
 
 /* ---------------- Diagnostic ---------------- */
