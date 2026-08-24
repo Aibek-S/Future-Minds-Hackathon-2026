@@ -18,6 +18,7 @@ import { OrchestratorChatModule } from './modules/orchestrator-chat/orchestrator
 import { DiagnosticModule } from './modules/diagnostic/diagnostic.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { VoiceFeedbackModule } from './modules/voice-feedback/voice-feedback.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     DiagnosticModule,
     FeedbackModule,
     NotificationsModule,
+    VoiceFeedbackModule,
   ],
 })
 export class AppModule {}
