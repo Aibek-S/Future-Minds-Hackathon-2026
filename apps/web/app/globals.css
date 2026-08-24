@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+@theme {
+  /* ZERTTE brand */
+  --color-primary: #7c3aed;
+  --color-primary-hover: #6d28d9;
+  --color-primary-light: #ede9fe;
+  --color-primary-subtle: #f5f3ff;
+
+  /* Base */
+  --color-background: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-2: #f1f5f9;
+  --color-border: #e2e8f0;
+
+  /* Text */
+  --color-text: #0f172a;
+  --color-text-2: #64748b;
+  --color-text-3: #94a3b8;
+
+  /* Semantic */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-info: #0ea5e9;
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+
+  /* Shadows */
+  --shadow-card: 0 4px 20px rgba(15, 23, 42, 0.06);
+  --shadow-pop: 0 12px 40px rgba(124, 58, 237, 0.16);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --animate-pulse-current: pulse-current 2s ease-in-out infinite;
+}
+
+@keyframes pulse-current {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.45);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 14px rgba(124, 58, 237, 0);
+    transform: scale(1.04);
+  }
+}
+
+html,
+body {
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+::selection {
+  background: var(--color-primary-light);
+}
+
+/* KaTeX inline sizing inside chat/lesson */
+.katex {
+  font-size: 1.05em;
+}
+
+/* Thin scrollbars for panels */
+.scroll-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
