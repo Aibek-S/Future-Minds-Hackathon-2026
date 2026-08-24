@@ -257,8 +257,21 @@ async function upsertMaterial(topicId: string, content: string) {
   const metadata = { source: 'seed', language: 'ru', type: 'lesson-notes' };
   const existing = await prisma.materialVector.findFirst({ where: { topicId } });
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error('OPENAI_API_KEY is required to seed real material embeddings');
-  const embedding = toPgVector(await embedText(content, { apiKey, model: process.env.EMBEDDING_MODEL ?? 'text-embedding-3-small', dimensions: EMBEDDING_DIMENSIONS }));
+  let embedding: string;
+  if (apiKey) {
+    embedding = toPgVector(
+      await embedText(content, {
+        apiKey,
+        model: process.env.EMBEDDING_MODEL ?? 'text-embedding-3-small',
+        dimensions: EMBEDDING_DIMENSIONS,
+      }),
+    );
+  } else {
+    // Fallback: deterministic non-zero vectors so seeding works without an
+    // OpenAI key. Semantic search quality is degraded until a key is set.
+    console.warn('OPENAI_API_KEY is not set; using mock embeddings (no semantic quality)');
+    embedding = toPgVector(createMockEmbedding(content));
+  }
   if (existing) {
     await prisma.$executeRaw`
       UPDATE "MaterialVector"
@@ -275,6 +288,21 @@ async function upsertMaterial(topicId: string, content: string) {
 
 function toPgVector(vector: number[]) {
   return `[${vector.join(',')}]`;
+}
+
+/**
+ * Deterministic non-zero embedding used when no OpenAI key is configured.
+ * Normalized so pgvector cosine operators work, but it carries no semantics.
+ */
+function createMockEmbedding(content: string): number[] {
+  const vector = Array<number>(EMBEDDING_DIMENSIONS).fill(0);
+  for (let index = 0; index < content.length; index += 1) {
+    const code = content.charCodeAt(index);
+    const bucket = (code * 31 + index * 17) % EMBEDDING_DIMENSIONS;
+    vector[bucket] += 1;
+  }
+  const norm = Math.hypot(...vector) || 1;
+  return vector.map((value) => value / norm);
 }
 
 async function main() {

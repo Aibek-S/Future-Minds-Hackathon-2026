@@ -3,7 +3,6 @@ import { DIAGNOSTIC_SYSTEM_PROMPT } from './prompts/diagnostic.prompt';
 import { FEEDBACK_SYSTEM_PROMPT } from './prompts/feedback.prompt';
 import { ORCHESTRATOR_SYSTEM_PROMPT } from './prompts/orchestrator.prompt';
 import {
-  AI_TOOLS_BY_TASK,
   TOOL_GET_KNOWLEDGE_STATE,
   TOOL_GET_ROADMAP,
   TOOL_GET_SUBJECT_SUMMARY,

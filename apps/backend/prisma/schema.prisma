@@ -354,9 +354,9 @@ model VoiceFeedback {
   id         String              @id @default(cuid())
   userId     String
   user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  audioUrl   String
+  audioUrl   String?
   status     VoiceFeedbackStatus @default(PENDING)
-  transcript String?
+  transcript String
   analysis   Json?
   createdAt  DateTime            @default(now())
   updatedAt  DateTime            @updatedAt

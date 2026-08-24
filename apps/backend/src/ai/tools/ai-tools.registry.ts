@@ -140,17 +140,6 @@ export const AI_TOOL_DEFINITIONS: AiToolDefinition[] = [
   },
 ];
 
-export const AI_TOOLS_BY_TASK: Record<string, string[]> = {
-  chat: [TOOL_GET_KNOWLEDGE_STATE, TOOL_GET_SUBJECT_SUMMARY, TOOL_GET_ROADMAP],
-  'chat_with_profile': [
-    TOOL_GET_KNOWLEDGE_STATE,
-    TOOL_GET_SUBJECT_SUMMARY,
-    TOOL_GET_ROADMAP,
-    TOOL_UPDATE_STUDENT_PROFILE,
-  ],
-  orchestrator: [TOOL_GET_CLASS_OVERVIEW],
-};
-
 /** Wraps our definitions into the OpenAI `tools` wire format. */
 export function toOpenAITools(definitions: AiToolDefinition[]): unknown[] {
   return definitions.map((definition) => ({
