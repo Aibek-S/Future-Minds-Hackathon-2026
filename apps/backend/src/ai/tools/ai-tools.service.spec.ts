@@ -6,6 +6,7 @@ describe('AiToolsService', () => {
     topic: { findMany: jest.Mock };
     subject: { findMany: jest.Mock };
     student: { update: jest.Mock };
+    studentKnowledge: { createMany: jest.Mock };
   };
   let service: AiToolsService;
 
@@ -14,6 +15,7 @@ describe('AiToolsService', () => {
       topic: { findMany: jest.fn() },
       subject: { findMany: jest.fn() },
       student: { update: jest.fn() },
+      studentKnowledge: { createMany: jest.fn() },
     };
     service = new AiToolsService(prisma as unknown as PrismaService);
   });
@@ -88,6 +90,41 @@ describe('AiToolsService', () => {
       expect.objectContaining({ where: { id: 's1' }, data: expect.objectContaining({ goals: args.goals, preferences: args.preferences }) }),
     );
     expect(result.goals[0].target).toBe('Олимпиада');
+  });
+
+  it('creates initial knowledge only for valid, existing topics', async () => {
+    prisma.topic.findMany.mockResolvedValue([{ id: 't1' }, { id: 't2' }]);
+    prisma.studentKnowledge.createMany.mockResolvedValue({ count: 1 });
+
+    const result = JSON.parse(
+      await service.execute(
+        'initialize_student_knowledge',
+        { knowledge: [{ topicId: 't1', mastery: 0.25 }, { topicId: 't2', mastery: 0.8 }] },
+        { studentId: 's1' },
+      ),
+    );
+
+    expect(prisma.studentKnowledge.createMany).toHaveBeenCalledWith({
+      data: [
+        { studentId: 's1', topicId: 't1', mastery: 0.25 },
+        { studentId: 's1', topicId: 't2', mastery: 0.8 },
+      ],
+      skipDuplicates: true,
+    });
+    expect(result).toEqual({ created: 1, skipped: 1 });
+  });
+
+  it('rejects an invalid diagnostic mastery before writing', async () => {
+    const result = JSON.parse(
+      await service.execute(
+        'initialize_student_knowledge',
+        { knowledge: [{ topicId: 't1', mastery: 1.1 }] },
+        { studentId: 's1' },
+      ),
+    );
+
+    expect(result.error).toContain('mastery');
+    expect(prisma.studentKnowledge.createMany).not.toHaveBeenCalled();
   });
 
   it('returns error for unknown tool', async () => {

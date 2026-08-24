@@ -8,6 +8,7 @@ import {
   TOOL_GET_ROADMAP,
   TOOL_GET_SUBJECT_SUMMARY,
   TOOL_UPDATE_STUDENT_PROFILE,
+  TOOL_INITIALIZE_STUDENT_KNOWLEDGE,
   TOOL_GET_CLASS_OVERVIEW,
 } from './tools/ai-tools.registry';
 import { SessionKind } from '@prisma/client';
@@ -36,7 +37,7 @@ export const AI_TASKS: Record<AiTask, AiTaskConfig> = {
   },
   [SessionKind.DIAGNOSTIC]: {
     prompt: DIAGNOSTIC_SYSTEM_PROMPT,
-    tools: [TOOL_UPDATE_STUDENT_PROFILE, TOOL_GET_KNOWLEDGE_STATE],
+    tools: [TOOL_UPDATE_STUDENT_PROFILE, TOOL_INITIALIZE_STUDENT_KNOWLEDGE, TOOL_GET_KNOWLEDGE_STATE],
     widgets: true,
     widgetLimit: 5,
   },

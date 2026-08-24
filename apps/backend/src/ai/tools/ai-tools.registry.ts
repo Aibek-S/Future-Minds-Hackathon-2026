@@ -8,6 +8,7 @@ export const TOOL_GET_KNOWLEDGE_STATE = 'get_knowledge_state';
 export const TOOL_GET_SUBJECT_SUMMARY = 'get_subject_summary';
 export const TOOL_GET_ROADMAP = 'get_roadmap';
 export const TOOL_UPDATE_STUDENT_PROFILE = 'update_student_profile';
+export const TOOL_INITIALIZE_STUDENT_KNOWLEDGE = 'initialize_student_knowledge';
 export const TOOL_GET_CLASS_OVERVIEW = 'get_class_overview';
 
 /**
@@ -86,6 +87,32 @@ export const AI_TOOL_DEFINITIONS: AiToolDefinition[] = [
           },
         },
       },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: TOOL_INITIALIZE_STUDENT_KNOWLEDGE,
+    description:
+      'Сохраняет стартовый уровень mastery по темам после диагностики. Принимает только topicId существующих тем и mastery от 0 до 1. Не перезаписывает уже существующие учебные результаты.',
+    parameters: {
+      type: 'object',
+      properties: {
+        knowledge: {
+          type: 'array',
+          minItems: 1,
+          description: 'Начальная оценка знаний по диагностированным темам.',
+          items: {
+            type: 'object',
+            properties: {
+              topicId: { type: 'string' },
+              mastery: { type: 'number', minimum: 0, maximum: 1 },
+            },
+            required: ['topicId', 'mastery'],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ['knowledge'],
       additionalProperties: false,
     },
   },

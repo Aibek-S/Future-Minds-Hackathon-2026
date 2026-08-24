@@ -39,6 +39,12 @@ export class AiToolsService {
         return this.stringify(
           context.studentId ? await this.updateStudentProfile(context.studentId, args) : { error: 'No student context' },
         );
+      case 'initialize_student_knowledge':
+        return this.stringify(
+          context.studentId
+            ? await this.initializeStudentKnowledge(context.studentId, args)
+            : { error: 'No student context' },
+        );
       case 'get_class_overview':
         return this.stringify(
           context.classId ? await this.getClassOverview(context.classId) : { error: 'No class context' },
@@ -179,6 +185,51 @@ export class AiToolsService {
       data: data as never,
       select: { id: true, grade: true, goals: true, preferences: true },
     });
+  }
+
+  private async initializeStudentKnowledge(studentId: string, args: Record<string, unknown>) {
+    const knowledge = args.knowledge;
+    if (!Array.isArray(knowledge) || knowledge.length === 0) {
+      return { error: 'knowledge must be a non-empty array' };
+    }
+
+    const entries = knowledge.map((entry) => entry as { topicId?: unknown; mastery?: unknown });
+    if (
+      entries.some(
+        (entry) =>
+          typeof entry.topicId !== 'string' ||
+          !entry.topicId ||
+          typeof entry.mastery !== 'number' ||
+          !Number.isFinite(entry.mastery) ||
+          entry.mastery < 0 ||
+          entry.mastery > 1,
+      )
+    ) {
+      return { error: 'Each knowledge entry requires topicId and mastery between 0 and 1' };
+    }
+
+    const topicIds = [...new Set(entries.map((entry) => entry.topicId as string))];
+    if (topicIds.length !== entries.length) {
+      return { error: 'Duplicate topicId values are not allowed' };
+    }
+
+    const topics = await this.prisma.topic.findMany({
+      where: { id: { in: topicIds } },
+      select: { id: true },
+    });
+    if (topics.length !== topicIds.length) {
+      return { error: 'One or more topics do not exist' };
+    }
+
+    const result = await this.prisma.studentKnowledge.createMany({
+      data: entries.map((entry) => ({
+        studentId,
+        topicId: entry.topicId as string,
+        mastery: entry.mastery as number,
+      })),
+      skipDuplicates: true,
+    });
+    return { created: result.count, skipped: entries.length - result.count };
   }
 
   private async ensureSubject(id: string) {
