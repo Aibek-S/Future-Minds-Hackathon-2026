@@ -1,0 +1,54 @@
+services:
+  - type: web
+    name: zertte-api
+    runtime: node
+    rootDir: apps/backend
+    buildCommand: npm ci && npx prisma generate && npm run build
+    startCommand: npm run start:prod
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: AI_PROVIDER
+        value: openai
+      - key: AI_PRIMARY_MODEL
+        value: gpt-4o-mini
+      - key: AI_MAX_RETRIES_PRIMARY
+        value: "2"
+      - key: AI_MAX_RETRIES_FALLBACK
+        value: "1"
+      - key: AI_TIMEOUT_MS
+        value: "30000"
+      - key: AI_MAX_CONTEXT_TOKENS
+        value: "60000"
+      - key: AI_MAX_WIDGETS
+        value: "3"
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: DEEPSEEK_BASE_URL
+        value: "https://api.deepseek.com"
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_BASE_URL
+        value: "https://openrouter.ai/api/v1"
+      - key: EMBEDDING_MODEL
+        value: "text-embedding-3-small"
+      - key: EMBEDDING_DIMENSIONS
+        value: "1536"
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3002"
+      - key: FRONTEND_URL
+        value: "https://web-three-beige.vercel.app"
+      - key: VOICE_MODE
+        value: "mock"
+      - key: DEMO_STUDENT_EMAIL
+        value: "alex.kim@student.edu.kz"
+      - key: DEMO_TEACHER_EMAIL
+        value: "aigul.zh@teacher.edu.kz"
