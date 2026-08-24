@@ -8,7 +8,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MasteryBar } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/card";
-import { CardSkeleton, EmptyState } from "@/components/ui/states";
+import { CardSkeleton, EmptyState, ErrorState } from "@/components/ui/states";
 import { studentsService } from "@/lib/services/students";
 import { useMe } from "@/lib/hooks/use-auth";
 import { masteryColor } from "@/lib/subjects";
@@ -23,6 +23,14 @@ export default function PracticePage() {
     enabled: !!studentId,
   });
 
+  if (knowledge.isError)
+    return (
+      <ErrorState
+        title="Не удалось загрузить практику"
+        body="Проверьте подключение к серверу и попробуйте ещё раз."
+        onRetry={() => void knowledge.refetch()}
+      />
+    );
   if (!studentId || knowledge.isLoading) return <CardSkeleton />;
 
   const topics = (knowledge.data ?? []).slice().sort((a, b) => a.mastery - b.mastery);

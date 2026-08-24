@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowRight, BookMarked, Lock } from "lucide-react";
+import { ArrowRight, BookMarked, Check, Lock, Play } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,7 @@ export default function RoadmapPage() {
   });
 
   const [selected, setSelected] = useState<TreeNodeData | null>(null);
+  const [guideOpen, setGuideOpen] = useState(false);
 
   const loading =
     !studentId || subjects.isLoading || topics.isLoading || knowledge.isLoading || roadmap.isLoading;
@@ -123,10 +124,67 @@ export default function RoadmapPage() {
               <MasteryBar mastery={progress} color={theme.accent} showLabel={false} />
               <span className="text-sm font-extrabold text-text-2">{Math.round(progress * 100)}%</span>
             </div>
-            <button className="mt-4 inline-flex items-center gap-2 rounded-md border-2 border-primary-light bg-primary-subtle px-4 py-2 text-sm font-bold text-primary transition hover:bg-primary-light">
+            <button
+              onClick={() => setGuideOpen(true)}
+              className="mt-4 inline-flex items-center gap-2 rounded-md border-2 border-primary-light bg-primary-subtle px-4 py-2 text-sm font-bold text-primary transition hover:bg-primary-light"
+            >
               <BookMarked className="size-4" /> Справочник
             </button>
           </motion.section>
+
+          {/* Guidebook — real unit overview from backend data */}
+          <Modal open={guideOpen} onClose={() => setGuideOpen(false)} title={`Справочник · ${subjects.data?.find((s) => s.id === subjectId)?.name ?? ""}`}>
+            <div className="mb-4 flex items-center justify-between rounded-lg bg-primary-subtle p-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-widest text-primary">Прогресс блока</p>
+                <p className="mt-0.5 text-lg font-black">
+                  {completedCount} из {nodes.length} тем · {Math.round(progress * 100)}%
+                </p>
+              </div>
+              <span className="grid size-12 place-items-center rounded-full bg-white text-xl shadow-card">📖</span>
+            </div>
+            <ul className="space-y-1.5">
+              {nodes.map((n) => (
+                <li key={n.topic.id} className="flex items-center gap-3 rounded-md border border-border px-3 py-2">
+                  <span
+                    className={`grid size-7 shrink-0 place-items-center rounded-full ${
+                      n.status === "completed"
+                        ? "bg-success text-white"
+                        : n.status === "current"
+                          ? "bg-primary text-white"
+                          : n.status === "locked"
+                            ? "bg-surface-2 text-text-3"
+                            : "bg-primary-light text-primary"
+                    }`}
+                  >
+                    {n.status === "completed" ? (
+                      <Check className="size-4" strokeWidth={3} />
+                    ) : n.status === "current" ? (
+                      <Play className="size-3.5" fill="currentColor" />
+                    ) : n.status === "locked" ? (
+                      <Lock className="size-3.5" />
+                    ) : (
+                      <ArrowRight className="size-3.5" />
+                    )}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold">{n.topic.name}</span>
+                  {n.mastery != null && (
+                    <span className="shrink-0 text-xs font-extrabold text-text-2">{Math.round(n.mastery * 100)}%</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {(() => {
+              const nextUp = nodes.find((n) => n.status === "current") ?? nodes.find((n) => n.status === "unlocked");
+              return nextUp ? (
+                <Link href={`/lesson/${nextUp.topic.id}`} onClick={() => setGuideOpen(false)}>
+                  <Button size="lg" fullWidth className="mt-5">
+                    Продолжить: {nextUp.topic.name} <ArrowRight className="size-4" />
+                  </Button>
+                </Link>
+              ) : null;
+            })()}
+          </Modal>
 
           {/* Tree */}
           <section aria-label="Дерево знаний">

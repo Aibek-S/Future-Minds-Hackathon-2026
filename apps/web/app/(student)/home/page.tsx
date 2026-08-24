@@ -6,7 +6,7 @@ import { ArrowRight, Flame, Map, Sparkles, Target } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { MasteryBar } from "@/components/ui/progress";
-import { CardSkeleton, EmptyState } from "@/components/ui/states";
+import { CardSkeleton, EmptyState, ErrorState } from "@/components/ui/states";
 import { studentsService } from "@/lib/services/students";
 import { topicsService } from "@/lib/services/topics";
 import { useMe } from "@/lib/hooks/use-auth";
@@ -53,6 +53,17 @@ export default function HomePage() {
         <CardSkeleton />
         <CardSkeleton />
       </div>
+    );
+  }
+  if (subjects.isError || roadmaps.isError) {
+    return (
+      <ErrorState
+        title="Не удалось загрузить главную"
+        onRetry={() => {
+          void subjects.refetch();
+          void roadmaps.refetch();
+        }}
+      />
     );
   }
 

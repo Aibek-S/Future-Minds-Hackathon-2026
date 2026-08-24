@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MasteryBar, ProgressBar } from "@/components/ui/progress";
-import { CardSkeleton, EmptyState } from "@/components/ui/states";
+import { CardSkeleton, EmptyState, ErrorState } from "@/components/ui/states";
 import { studentsService } from "@/lib/services/students";
 import { topicsService } from "@/lib/services/topics";
 import { useMe } from "@/lib/hooks/use-auth";
@@ -23,6 +23,8 @@ export default function LearnPage() {
   });
   const [openId, setOpenId] = useState<string | null>(null);
 
+  if (subjects.isError)
+    return <ErrorState title="Не удалось загрузить предметы" onRetry={() => void subjects.refetch()} />;
   if (!studentId || subjects.isLoading) return <CardSkeleton />;
   if ((subjects.data ?? []).length === 0)
     return (
