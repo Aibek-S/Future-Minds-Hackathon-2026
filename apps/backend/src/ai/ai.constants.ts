@@ -11,6 +11,8 @@ export const AI_ENV = {
   deepseekBaseUrl: 'DEEPSEEK_BASE_URL',
   openrouterApiKey: 'OPENROUTER_API_KEY',
   openrouterBaseUrl: 'OPENROUTER_BASE_URL',
+  openaiApiKey: 'OPENAI_API_KEY',
+  openaiBaseUrl: 'OPENAI_BASE_URL',
 } as const;
 
 export const DEFAULTS = {
@@ -30,6 +32,7 @@ export const DEFAULTS = {
   maxWidgets: 3,
   deepseekBaseUrl: 'https://api.deepseek.com',
   openrouterBaseUrl: 'https://openrouter.ai/api/v1',
+  openaiBaseUrl: 'https://api.openai.com/v1',
 } as const;
 
 export const RETRYABLE_HTTP_CODES = new Set([429, 500, 502, 503, 504]);

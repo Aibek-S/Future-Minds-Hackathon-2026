@@ -49,7 +49,7 @@ export class AiRouterService {
 
   private resolveKind(): AiProviderKind {
     const value = (this.config.get<string>(AI_ENV.provider) ?? DEFAULTS.provider).toLowerCase();
-    if (value === 'deepseek' || value === 'openrouter' || value === 'mock') {
+    if (value === 'deepseek' || value === 'openrouter' || value === 'openai' || value === 'mock') {
       return value;
     }
     this.logger.warn(`Unknown AI_PROVIDER "${value}", falling back to mock`);
@@ -85,6 +85,14 @@ export class AiRouterService {
         model,
         baseURL: this.config.get<string>(AI_ENV.openrouterBaseUrl) ?? DEFAULTS.openrouterBaseUrl,
         apiKey,
+      });
+    }
+    if (kind === 'openai') {
+      return new AiProvider({
+        kind,
+        model,
+        baseURL: this.config.get<string>(AI_ENV.openaiBaseUrl) ?? DEFAULTS.openaiBaseUrl,
+        apiKey: this.config.get<string>(AI_ENV.openaiApiKey) ?? '',
       });
     }
     return null;

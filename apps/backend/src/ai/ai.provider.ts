@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
-export type AiProviderKind = 'deepseek' | 'openrouter' | 'mock';
+export type AiProviderKind = 'deepseek' | 'openrouter' | 'openai' | 'mock';
 
 export interface AiProviderConfig {
   kind: AiProviderKind;
