@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { RecommendationStatus, RecommendationType, Prisma } from '@prisma/client';
+import { RecommendationStatus, RecommendationType, Prisma, SessionKind } from '@prisma/client';
+import { AiService } from '../../ai/ai.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LessonPlanValidator } from '../lessons/dto/lesson-plan.validator';
 import { ApproveRecommendationDto, OrchestratorQueryDto } from './dto/orchestrator.dto';
@@ -11,7 +12,7 @@ type LessonPlanPayload = { topicId: string; date: string; planJson: Record<strin
 export class OrchestratorService {
   private readonly lessonPlanValidator = new LessonPlanValidator();
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly ai: AiService) {}
 
   async query(dto: OrchestratorQueryDto, requester: Requester) {
     await this.assertTeacherAccess(dto.teacherId, requester);
@@ -21,6 +22,14 @@ export class OrchestratorService {
     }
 
     const topic = await this.findPriorityTopic(dto.classId);
+    const aiResult = await this.ai.generate({
+      task: SessionKind.ORCHESTRATOR,
+      classId: dto.classId,
+      messages: [{
+        role: 'user',
+        content: `Teacher question: ${dto.question}\nPriority topic: ${topic.name}; class mastery: ${Math.round(topic.mastery * 100)}%. Give a concise, actionable lesson recommendation.`,
+      }],
+    });
     const payload = this.createLessonPlanPayload(topic.id, topic.name);
     const recommendation = await this.prisma.aiRecommendation.create({
       data: {
@@ -33,7 +42,7 @@ export class OrchestratorService {
     });
 
     return {
-      answer: `I recommend a focused lesson on ${topic.name}. Review the key concept, then use differentiated practice.`,
+      answer: aiResult.text,
       reasoning: [
         `${Math.round(topic.mastery * 100)}% class mastery for ${topic.name}`,
         'The proposed plan includes support and extension tasks.',

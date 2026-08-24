@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { Throttle } from '@nestjs/throttler';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { SessionKind } from '@prisma/client';
 import { Response } from 'express';
@@ -35,6 +36,7 @@ export class ChatController {
    * Events: `message` (text chunk), `widget`, `done` (usage), `error`.
    */
   @Post('sessions/:id/messages')
+  @Throttle({ default: { limit: 20, ttl: 3600000 } })
   async sendMessage(
     @Param('id') id: string,
     @Body() dto: SendMessageDto,
