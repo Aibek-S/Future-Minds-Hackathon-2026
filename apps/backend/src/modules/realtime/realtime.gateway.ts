@@ -1,12 +1,14 @@
-import { WebSocketGateway, WebSocketServer, OnGatewayConnection } from '@nestjs/websockets';
+import { WebSocketGateway, WebSocketServer, OnGatewayConnection, OnGatewayInit } from '@nestjs/websockets';
 import { JwtService } from '@nestjs/jwt';
 import { Server, Socket } from 'socket.io';
 import { PrismaService } from '../../prisma/prisma.service';
+import { RedisPubSubService } from './redis-pubsub.service';
 
 @WebSocketGateway({ namespace: '/realtime', cors: { origin: true } })
-export class RealtimeGateway implements OnGatewayConnection {
-  constructor(private readonly jwt: JwtService, private readonly prisma: PrismaService) {}
+export class RealtimeGateway implements OnGatewayConnection, OnGatewayInit {
+  constructor(private readonly jwt: JwtService, private readonly prisma: PrismaService, private readonly broker: RedisPubSubService) {}
   @WebSocketServer() server: Server;
+  afterInit() { this.broker.onMessage(({ event, payload }) => this.emitLocal(event, payload)); }
   async handleConnection(client: Socket) {
     try {
       const token = client.handshake.auth?.token ?? client.handshake.query?.token;
@@ -20,10 +22,19 @@ export class RealtimeGateway implements OnGatewayConnection {
       }
     } catch { client.disconnect(true); }
   }
-  emitKnowledgeStateUpdated(payload: { studentId: string; topicId: string; masteryAfter: number; timestamp: string }) {
-    this.server.to(`student:${payload.studentId}`).emit('knowledge_state_updated', payload);
+  async emitKnowledgeStateUpdated(payload: { studentId: string; topicId: string; masteryAfter: number; timestamp: string }) {
+    await this.emit('knowledge_state_updated', payload);
   }
-  emitTaskAttemptSubmitted(payload: { studentId: string; topicId: string; correct: boolean; masteryAfter: number }) {
-    this.server.to(`student:${payload.studentId}`).emit('task_attempt_submitted', payload);
+  async emitTaskAttemptSubmitted(payload: { studentId: string; topicId: string; correct: boolean; masteryAfter: number }) {
+    await this.emit('task_attempt_submitted', payload);
+  }
+  private async emit(event: string, payload: Record<string, unknown>) {
+    const student = await this.prisma.student.findUnique({ where: { id: payload.studentId as string }, select: { classId: true } });
+    const enriched = { ...payload, classId: student?.classId ?? null };
+    this.emitLocal(event, enriched); this.broker.publish(event, enriched);
+  }
+  private emitLocal(event: string, payload: Record<string, unknown>) {
+    this.server.to(`student:${payload.studentId}`).emit(event, payload);
+    if (payload.classId) this.server.to(`class:${payload.classId}`).emit(event, payload);
   }
 }

@@ -79,8 +79,8 @@ export class AttemptsService {
       result.masteryAfter,
     );
     const payload = { studentId, topicId: task.topicId, correct: answerCheck.correct, masteryAfter: result.masteryAfter };
-    this.realtime.emitTaskAttemptSubmitted(payload);
-    this.realtime.emitKnowledgeStateUpdated({ ...payload, timestamp: new Date().toISOString() });
+    await this.realtime.emitTaskAttemptSubmitted(payload);
+    await this.realtime.emitKnowledgeStateUpdated({ ...payload, timestamp: new Date().toISOString() });
     return {
       correct: answerCheck.correct,
       feedback: answerCheck.feedback,

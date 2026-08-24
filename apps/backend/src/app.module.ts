@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { PrismaModule } from './prisma/prisma.module';
@@ -21,6 +22,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { VoiceFeedbackModule } from './modules/voice-feedback/voice-feedback.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { DemoInterceptor } from './common/interceptors/demo.interceptor';
 
 @Module({
   imports: [
@@ -55,5 +57,6 @@ import { AdminModule } from './modules/admin/admin.module';
     RealtimeModule,
     AdminModule,
   ],
+  providers: [{ provide: APP_INTERCEPTOR, useClass: DemoInterceptor }],
 })
 export class AppModule {}
