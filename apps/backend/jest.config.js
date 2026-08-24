@@ -4,5 +4,6 @@ module.exports = {
   rootDir: '.',
   testEnvironment: 'node',
   testRegex: '.*\\.spec\\.ts$',
+  testPathIgnorePatterns: ['/\\.worktrees/'],
   transform: { '^.+\\.(t|j)s$': 'ts-jest' },
 };

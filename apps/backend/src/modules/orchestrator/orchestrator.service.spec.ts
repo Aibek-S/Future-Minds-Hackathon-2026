@@ -37,6 +37,7 @@ describe('OrchestratorService', () => {
     service = new OrchestratorService(
       prisma as unknown as PrismaService,
       { generate: jest.fn().mockResolvedValue({ text: 'AI lesson recommendation' }) } as unknown as AiService,
+      { emitNewRecommendation: jest.fn() } as never,
     );
   });
 

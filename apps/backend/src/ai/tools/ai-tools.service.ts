@@ -5,6 +5,7 @@ import { Prisma } from '@prisma/client';
 
 const COMPLETED_MASTERY = 0.8;
 const PREREQUISITE_MASTERY = 0.4;
+const MATERIAL_SIMILARITY_THRESHOLD = 0.65;
 
 export interface ToolExecutionContext {
   studentId?: string;
@@ -67,7 +68,14 @@ export class AiToolsService {
     const rows = await this.prisma.$queryRaw<Array<{ id: string; topicId: string; content: string; metadata: unknown; similarity: number }>>`
       SELECT id, "topicId", content, metadata, 1 - (embedding <=> ${vector}::vector) AS similarity
       FROM "MaterialVector" ${filter} ORDER BY embedding <=> ${vector}::vector LIMIT 5`;
-    return { materials: rows.map((row) => ({ ...row, similarity: Number(row.similarity) })) };
+    const materials = rows
+      .map((row) => ({ ...row, similarity: Number(row.similarity) }))
+      .filter((row) => row.similarity >= MATERIAL_SIMILARITY_THRESHOLD);
+    return {
+      materials,
+      fallbackToGeneralKnowledge: materials.length === 0,
+      similarityThreshold: MATERIAL_SIMILARITY_THRESHOLD,
+    };
   }
 
   private async getClassOverview(classId: string) {

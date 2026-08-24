@@ -12,12 +12,12 @@ export class TopicsService {
 
   async addMaterial(topicId: string, dto: CreateMaterialDto) {
     await this.ensureTopic(topicId);
-    const chunks = this.chunkText(dto.content);
+    const chunks = this.chunkText(dto.content!);
     for (const content of chunks) {
       const embedding = `[${(await this.embeddings.embed(content)).join(',')}]`;
       await this.prisma.$executeRaw`INSERT INTO "MaterialVector" (id, "topicId", content, metadata, embedding) VALUES (${randomUUID()}, ${topicId}, ${content}, ${JSON.stringify({ sourceUrl: dto.sourceUrl ?? null, chunkCount: chunks.length })}::jsonb, ${embedding}::vector)`;
     }
-    return { status: 'ready', chunks: chunks.length };
+    return { status: 'completed', chunks: chunks.length };
   }
 
   async listTopics(subjectId?: string) {

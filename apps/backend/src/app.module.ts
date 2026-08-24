@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerStorageRedisService } from 'nestjs-throttler-storage-redis';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { TopicsModule } from './modules/topics/topics.module';
@@ -30,12 +31,14 @@ import { DemoInterceptor } from './common/interceptors/demo.interceptor';
       isGlobal: true,
       envFilePath: ['.env.local', '.env'],
     }),
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60000,
-        limit: 100,
-      },
-    ]),
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        throttlers: [{ ttl: 60000, limit: 100 }],
+        storage: new ThrottlerStorageRedisService(`redis://${config.get<string>('REDIS_HOST') ?? 'localhost'}:${config.get<string>('REDIS_PORT') ?? '6379'}`),
+      }),
+    }),
     PrismaModule,
     AiModule,
     AuthModule,

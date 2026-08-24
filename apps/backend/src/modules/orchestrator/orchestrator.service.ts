@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { RecommendationStatus, RecommendationType, Prisma, SessionKind } from '@prisma/client';
 import { AiService } from '../../ai/ai.service';
+import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LessonPlanValidator } from '../lessons/dto/lesson-plan.validator';
 import { ApproveRecommendationDto, OrchestratorQueryDto } from './dto/orchestrator.dto';
@@ -12,7 +13,7 @@ type LessonPlanPayload = { topicId: string; date: string; planJson: Record<strin
 export class OrchestratorService {
   private readonly lessonPlanValidator = new LessonPlanValidator();
 
-  constructor(private readonly prisma: PrismaService, private readonly ai: AiService) {}
+  constructor(private readonly prisma: PrismaService, private readonly ai: AiService, private readonly realtime: RealtimeGateway) {}
 
   async query(dto: OrchestratorQueryDto, requester: Requester) {
     await this.assertTeacherAccess(dto.teacherId, requester);
@@ -40,6 +41,7 @@ export class OrchestratorService {
         reasoning: `Lowest observed class mastery is ${Math.round(topic.mastery * 100)}% for ${topic.name}.`,
       },
     });
+    this.realtime.emitNewRecommendation({ classId: dto.classId, recommendationId: recommendation.id, type: recommendation.type });
 
     return {
       answer: aiResult.text,
