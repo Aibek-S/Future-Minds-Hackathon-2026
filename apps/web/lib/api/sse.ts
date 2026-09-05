@@ -78,7 +78,8 @@ export async function streamMessage(
               : String((parsed as { text?: string })?.text ?? "");
           if (text) handlers.onText?.(text);
         } else if (event === "widget") {
-          handlers.onWidget?.(parsed as AiWidget);
+          const widget = (parsed as { widget?: AiWidget })?.widget;
+          if (widget) handlers.onWidget?.(widget);
         } else if (event === "tool") {
           const tool = (parsed as { tool?: string })?.tool;
           if (tool) handlers.onTool?.(tool);
