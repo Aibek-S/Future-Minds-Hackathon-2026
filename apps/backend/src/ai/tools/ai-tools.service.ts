@@ -201,6 +201,9 @@ export class AiToolsService {
     if (args.preferences !== undefined) {
       data.preferences = args.preferences;
     }
+    if (typeof args.grade === 'number' && Number.isInteger(args.grade) && args.grade >= 7 && args.grade <= 12) {
+      data.grade = args.grade;
+    }
     if (Object.keys(data).length === 0) {
       return { error: 'Nothing to update' };
     }

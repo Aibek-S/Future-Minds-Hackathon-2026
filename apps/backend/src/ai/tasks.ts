@@ -2,6 +2,7 @@ import { CHAT_SYSTEM_PROMPT, CHAT_WITH_PROFILE_SYSTEM_PROMPT } from './prompts/c
 import { DIAGNOSTIC_SYSTEM_PROMPT } from './prompts/diagnostic.prompt';
 import { FEEDBACK_SYSTEM_PROMPT } from './prompts/feedback.prompt';
 import { ORCHESTRATOR_SYSTEM_PROMPT } from './prompts/orchestrator.prompt';
+import { PERSONALIZATION_SYSTEM_PROMPT } from './prompts/personalization.prompt';
 import {
   TOOL_GET_KNOWLEDGE_STATE,
   TOOL_GET_ROADMAP,
@@ -54,6 +55,12 @@ export const AI_TASKS: Record<AiTask, AiTaskConfig> = {
     widgets: true,
     widgetLimit: 2,
   },
+  [SessionKind.PERSONALIZATION]: {
+    prompt: PERSONALIZATION_SYSTEM_PROMPT,
+    tools: [TOOL_UPDATE_STUDENT_PROFILE],
+    widgets: false,
+    widgetLimit: 0,
+  },
 };
 
 export function getTaskConfig(task: AiTask): AiTaskConfig {
@@ -62,5 +69,10 @@ export function getTaskConfig(task: AiTask): AiTaskConfig {
 
 /** Which sessions are owned by a student vs a teacher. */
 export function isStudentKind(kind: AiTask): boolean {
-  return kind === SessionKind.STUDENT_CHAT || kind === SessionKind.DIAGNOSTIC || kind === SessionKind.FEEDBACK;
+  return (
+    kind === SessionKind.STUDENT_CHAT ||
+    kind === SessionKind.DIAGNOSTIC ||
+    kind === SessionKind.FEEDBACK ||
+    kind === SessionKind.PERSONALIZATION
+  );
 }

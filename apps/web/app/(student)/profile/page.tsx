@@ -1,12 +1,14 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Save } from "lucide-react";
+import { Save, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MasteryBar } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/card";
 import { CardSkeleton } from "@/components/ui/states";
+import { Modal } from "@/components/ui/modal";
+import { AiChatPanel } from "@/components/ai/chat-panel";
 import { studentsService } from "@/lib/services/students";
 import { api } from "@/lib/api/client";
 import { useMe } from "@/lib/hooks/use-auth";
@@ -31,6 +33,7 @@ export default function ProfilePage() {
 
   const [goalTarget, setGoalTarget] = useState("");
   const [style, setStyle] = useState("socratic");
+  const [personalizationOpen, setPersonalizationOpen] = useState(false);
   const profile = useQuery({
     queryKey: ["student-profile", studentId],
     queryFn: () => studentsService.get(studentId!),
@@ -161,6 +164,39 @@ export default function ProfilePage() {
           </Button>
         </div>
       </section>
+
+      {/* AI Personalization */}
+      {me.data?.role !== "TEACHER" && (
+        <section className="rounded-xl border border-border bg-surface p-5 shadow-card">
+          <h3 className="mb-2 font-black">ИИ персонализация</h3>
+          <p className="mb-4 text-sm text-text-2">
+            Ответь на несколько вопросов — ИИ заполнит твой профиль автоматически.
+          </p>
+          <Button onClick={() => setPersonalizationOpen(true)}>
+            <Sparkles className="mr-2 size-4" /> Начать персонализацию
+          </Button>
+        </section>
+      )}
+
+      <Modal
+        open={personalizationOpen}
+        onClose={() => {
+          setPersonalizationOpen(false);
+          void qc.invalidateQueries({ queryKey: ["student-profile", studentId] });
+          void qc.invalidateQueries({ queryKey: ["me"] });
+        }}
+        title="ИИ персонализация"
+        wide
+      >
+        {personalizationOpen && (
+          <AiChatPanel
+            scenario="personalization"
+            className="h-[70vh]"
+            greeting="Привет! Давай заполним твой профиль. Я задам несколько вопросов — это займёт 2 минуты."
+            quickPrompts={["Хочу готовиться к ЕНТ", "Нужно подтянуть математику", "Готовлюсь к олимпиаде"]}
+          />
+        )}
+      </Modal>
     </div>
   );
 }

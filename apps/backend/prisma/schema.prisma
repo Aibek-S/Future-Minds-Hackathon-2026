@@ -67,6 +67,7 @@ enum SessionKind {
   DIAGNOSTIC
   FEEDBACK
   ORCHESTRATOR
+  PERSONALIZATION
 }
 
 model User {

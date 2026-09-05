@@ -182,7 +182,7 @@ export interface DiagnosticResult {
 
 /* ---------------- AI sessions ---------------- */
 
-export type AiScenario = "chat" | "diagnostic" | "feedback" | "orchestrator/chat";
+export type AiScenario = "chat" | "diagnostic" | "feedback" | "orchestrator/chat" | "personalization";
 
 export interface AiSession {
   sessionId: string;

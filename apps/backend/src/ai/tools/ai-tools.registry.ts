@@ -65,7 +65,7 @@ export const AI_TOOL_DEFINITIONS: AiToolDefinition[] = [
   {
     name: TOOL_UPDATE_STUDENT_PROFILE,
     description:
-      'Обновляет цели (goals) и предпочтения (preferences) ученика. Цели — массив объектов { subject, target, deadline?, priority? }. Предпочтения — объект вида { language?, explanationStyle?, weakTopics? }. Возвращает обновлённый профиль.',
+      'Обновляет цели (goals), предпочтения (preferences) и класс (grade) ученика. Цели — массив объектов { subject, target, deadline?, priority? }. Предпочтения — объект вида { language?, explanationStyle?, weakTopics? }. grade — число 7..12. Возвращает обновлённый профиль.',
     parameters: {
       type: 'object',
       properties: {
@@ -91,6 +91,10 @@ export const AI_TOOL_DEFINITIONS: AiToolDefinition[] = [
             explanationStyle: { type: 'string' },
             weakTopics: { type: 'array', items: { type: 'string' } },
           },
+        },
+        grade: {
+          type: 'number',
+          description: 'Класс ученика, 7..12, опционально.',
         },
       },
       additionalProperties: false,
