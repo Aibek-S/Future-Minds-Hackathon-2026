@@ -185,8 +185,24 @@ export class AiService {
         return response;
       }
 
+      // The API requires 'tool' result messages to immediately follow the
+      // assistant message that requested them via tool_calls. That assistant
+      // message was never being added to the conversation, so a second
+      // tool-call round (or a strict provider like DeepSeek) rejected the
+      // orphan 'tool' messages with 400 "must be a response to a preceding
+      // message with 'tool_calls'".
+      const assistantToolCallMessage: ChatCompletionMessageParam = {
+        role: 'assistant',
+        content: response.text || null,
+        tool_calls: calls.map((call) => ({
+          id: call.id ?? '',
+          type: 'function',
+          function: { name: call.function?.name ?? '', arguments: call.function?.arguments ?? '{}' },
+        })),
+      };
+
       const toolMessages = await this.executeToolCalls(calls, context, onToolCall);
-      messages = [...messages, ...toolMessages];
+      messages = [...messages, assistantToolCallMessage, ...toolMessages];
     }
 
     // The model kept requesting tools instead of producing a final answer.
