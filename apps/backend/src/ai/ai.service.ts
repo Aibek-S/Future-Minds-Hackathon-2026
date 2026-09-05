@@ -52,7 +52,16 @@ export class AiService {
     return this.toResult(response.text, response.inputTokens, response.outputTokens, this.lastModel, this.lastKind);
   }
 
-  /** Streaming generation: streams final text, executes tools transparently. */
+  /**
+   * Streaming generation: streams final text, executes tools transparently.
+   *
+   * Both the plain-text and widget-bearing (buffered) paths share one
+   * producer/queue so a `tool` chunk can reach the client the instant a
+   * function-calling tool starts running — regardless of whether the final
+   * answer itself streams token-by-token or arrives as one buffered blob
+   * (widget replies must be buffered so `{ segments: [...] }` can be parsed
+   * as a whole before splitting it into ordered text/widget chunks).
+   */
   async *generateStream(options: AiGenerateOptions): AiStream {
     const { messages, tools, studentId, classId } = this.prepare(options);
     const chain = this.router.buildChain();
@@ -64,30 +73,7 @@ export class AiService {
 
     const taskConfig = getTaskConfig(options.task);
     const wantsSegments = taskConfig.widgets;
-
-    if (wantsSegments) {
-      // Widget-bearing reply: buffer the full model text (tools executed
-      // server-side), parse { segments: [...] }, then emit text/widget chunks
-      // in strict order so each widget lands exactly where the model intended.
-      const response = await this.runWithTools(chain, messages, tools, { studentId, classId }, false);
-      const usage = {
-        inputTokens: response.inputTokens,
-        outputTokens: response.outputTokens,
-        model: this.lastModel,
-        provider: this.lastKind,
-      };
-      const widgetLimit = options.widgetLimit ?? MAX_WIDGETS_PER_MESSAGE;
-      const segments = parseSegments(response.text, widgetLimit);
-      for (const segment of segments) {
-        if (segment.kind === 'text') {
-          yield { type: 'text', text: segment.text };
-        } else {
-          yield { type: 'widget', widget: segment.widget };
-        }
-      }
-      yield { type: 'done', usage };
-      return;
-    }
+    const widgetLimit = options.widgetLimit ?? MAX_WIDGETS_PER_MESSAGE;
 
     const queue: AiStreamChunk[] = [];
     const waiters: Array<() => void> = [];
@@ -104,13 +90,40 @@ export class AiService {
         waiters.push(resolve);
       });
 
+    const onToolCall = (tool: string) => push({ type: 'tool', tool });
+
     const producer = (async () => {
       try {
-        const response = await this.runWithTools(chain, messages, tools, { studentId, classId }, true, (chunk) => {
-          if (chunk.type === 'text' && chunk.text) {
-            push({ type: 'text', text: chunk.text });
+        const response = await this.runWithTools(
+          chain,
+          messages,
+          tools,
+          { studentId, classId },
+          !wantsSegments,
+          wantsSegments
+            ? undefined
+            : (chunk) => {
+                if (chunk.type === 'text' && chunk.text) {
+                  push({ type: 'text', text: chunk.text });
+                }
+              },
+          onToolCall,
+        );
+
+        if (wantsSegments) {
+          // Widget-bearing reply: the full model text is already buffered
+          // (tools executed server-side above); parse { segments: [...] }
+          // and emit text/widget chunks in strict order.
+          const segments = parseSegments(response.text, widgetLimit);
+          for (const segment of segments) {
+            if (segment.kind === 'text') {
+              push({ type: 'text', text: segment.text });
+            } else {
+              push({ type: 'widget', widget: segment.widget });
+            }
           }
-        });
+        }
+
         push({
           type: 'done',
           usage: {
@@ -154,6 +167,7 @@ export class AiService {
     context: { studentId?: string; classId?: string; userId?: string },
     stream: boolean,
     onChunk?: (chunk: AiProviderChunk) => void,
+    onToolCall?: (tool: string) => void,
   ): Promise<AiProviderResponse> {
     if (!tools.length || !context.studentId && !context.classId) {
       return this.runChain(chain, initialMessages, tools, stream, onChunk);
@@ -171,7 +185,7 @@ export class AiService {
         return response;
       }
 
-      const toolMessages = await this.executeToolCalls(calls, context);
+      const toolMessages = await this.executeToolCalls(calls, context, onToolCall);
       messages = [...messages, ...toolMessages];
     }
 
@@ -188,10 +202,12 @@ export class AiService {
   private async executeToolCalls(
     calls: ToolCall[],
     context: { studentId?: string; classId?: string; userId?: string },
+    onToolCall?: (tool: string) => void,
   ): Promise<ChatCompletionMessageParam[]> {
     const messages: ChatCompletionMessageParam[] = [];
     for (const call of calls) {
       const name = call.function?.name ?? 'unknown';
+      onToolCall?.(name);
       let parsed: Record<string, unknown> = {};
       try {
         parsed = JSON.parse(call.function?.arguments ?? '{}');

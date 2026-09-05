@@ -83,6 +83,9 @@ export class ChatController {
             widgets.push(chunk.widget);
             this.writeEvent(response, 'widget', { widget: chunk.widget });
             break;
+          case 'tool':
+            this.writeEvent(response, 'tool', { tool: chunk.tool });
+            break;
           case 'done':
             this.writeEvent(response, 'done', { usage: chunk.usage });
             break;

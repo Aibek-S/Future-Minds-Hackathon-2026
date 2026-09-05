@@ -307,6 +307,10 @@ Content-Type: application/json (кроме multipart для voice)
 // Event: message
 data: { "text": "Рекомендую повторить теорему Виета…" }
 
+// Event: tool (в момент запуска function-calling инструмента на бэкенде;
+// используется фронтом для live-индикатора «ИИ ищет материалы…» и т.п.)
+data: { "tool": "search_materials" }
+
 // Event: widget (в строгом порядке сегментов)
 data: { "widget": { "type": "QUIZ", "payload": { ... } } }
 

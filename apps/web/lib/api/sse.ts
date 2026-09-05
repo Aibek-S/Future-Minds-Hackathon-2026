@@ -4,6 +4,8 @@ import type { AiWidget } from "../types";
 export interface StreamHandlers {
   onText?: (chunk: string) => void;
   onWidget?: (widget: AiWidget) => void;
+  /** Fired the instant the AI starts running a function-calling tool server-side (e.g. `search_materials`). */
+  onTool?: (tool: string) => void;
   onDone?: (usage: unknown) => void;
   onError?: (error: Error) => void;
 }
@@ -12,9 +14,9 @@ export interface StreamHandlers {
  * Consumes the backend SSE stream for
  * POST /{scenario}/sessions/:id/messages.
  *
- * Events: `message` (text chunk), `widget` (structured widget), `done` (usage).
- * Uses fetch + ReadableStream because EventSource cannot send POST bodies or
- * an Authorization header.
+ * Events: `message` (text chunk), `widget` (structured widget), `tool`
+ * (tool-use started), `done` (usage). Uses fetch + ReadableStream because
+ * EventSource cannot send POST bodies or an Authorization header.
  */
 export async function streamMessage(
   path: string,
@@ -77,6 +79,9 @@ export async function streamMessage(
           if (text) handlers.onText?.(text);
         } else if (event === "widget") {
           handlers.onWidget?.(parsed as AiWidget);
+        } else if (event === "tool") {
+          const tool = (parsed as { tool?: string })?.tool;
+          if (tool) handlers.onTool?.(tool);
         } else if (event === "done") {
           handlers.onDone?.(parsed);
         }

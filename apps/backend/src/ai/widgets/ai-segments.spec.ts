@@ -64,6 +64,38 @@ describe('parseSegments', () => {
     expect(segments[0].kind).toBe('widget');
   });
 
+  it('recovers the trailing JSON when the model prepends prose (even with brace-heavy LaTeX)', () => {
+    const jsonTail = JSON.stringify({
+      segments: [
+        { kind: 'text', text: 'Итоговое объяснение.' },
+        { kind: 'widget', widget: { type: 'FORMULA_CARD', payload: { title: 'x', formula: 'x=\\frac{-b}{a}' } } },
+      ],
+    });
+    const reply = `Линейное уравнение: $x=\\frac{-b}{a}$, где $a\\neq 0$.\n\n${jsonTail}`;
+    const segments = parseSegments(reply);
+    expect(segments).toEqual([
+      { kind: 'text', text: 'Итоговое объяснение.' },
+      { kind: 'widget', widget: { type: 'FORMULA_CARD', payload: { title: 'x', formula: 'x=\\frac{-b}{a}' } } },
+    ]);
+  });
+
+  it('repairs a stray backslash before a $ delimiter and recovers the full structure', () => {
+    // Real model output: `\$$x = 1$$` instead of `$$x = 1$$` is invalid JSON
+    // (a backslash is never a valid escape before `$`), but the intended
+    // content is unambiguous, so parseSegments should recover it fully.
+    const reply = '{"segments": [{"kind": "widget", "widget": {"type": "FORMULA_CARD", "payload": {"title": "t", "formula": "\\$$x = 1$$"}}}]}';
+    const segments = parseSegments(reply);
+    expect(segments).toEqual([
+      { kind: 'widget', widget: { type: 'FORMULA_CARD', payload: { title: 't', formula: '$$x = 1$$' } } },
+    ]);
+  });
+
+  it('recovers readable text (best effort) when JSON is too broken to repair', () => {
+    const reply = '{"segments": [{"kind": "text", "text": "Первая часть."}, {"kind": "text", "text": "Вторая часть."}], "broken": \\oops}';
+    const segments = parseSegments(reply);
+    expect(segments).toEqual([{ kind: 'text', text: 'Первая часть.\n\nВторая часть.' }]);
+  });
+
   it('falls back to plain text on invalid JSON', () => {
     const segments = parseSegments('{"segments": broken');
     expect(segments).toEqual([{ kind: 'text', text: '{"segments": broken' }]);

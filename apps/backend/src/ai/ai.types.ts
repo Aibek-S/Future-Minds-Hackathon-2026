@@ -42,11 +42,17 @@ export interface AiWidgetChunk {
   widget: AiWidget;
 }
 
+/** Emitted the moment a function-calling tool starts executing server-side, so the UI can show a live "using tool" indicator. */
+export interface AiToolStartChunk {
+  type: 'tool';
+  tool: string;
+}
+
 export interface AiDoneChunk {
   type: 'done';
   usage: AiUsage;
 }
 
-export type AiStreamChunk = AiTextChunk | AiToolCallsChunk | AiWidgetChunk | AiDoneChunk;
+export type AiStreamChunk = AiTextChunk | AiToolCallsChunk | AiWidgetChunk | AiToolStartChunk | AiDoneChunk;
 
 export type AiStream = AsyncIterable<AiStreamChunk>;

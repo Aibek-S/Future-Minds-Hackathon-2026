@@ -5,13 +5,28 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import { motion } from "framer-motion";
+import "katex/dist/katex.min.css";
+
+/**
+ * The AI is instructed to use `$...$` / `$$...$$` for math (the only syntax
+ * remark-math understands), but the model sometimes ignores that and writes
+ * LaTeX's `\(...\)` / `\[...\]` instead. Left alone, CommonMark's own
+ * backslash-escaping strips those backslashes before rendering, leaving bare
+ * "(a)" text instead of math. Normalize both styles to `$`/`$$` up front so
+ * formulas render correctly regardless of which delimiter the model used.
+ */
+function normalizeMathDelimiters(text: string): string {
+  return text
+    .replace(/\\\[([\s\S]+?)\\\]/g, (_match, inner: string) => `$$${inner}$$`)
+    .replace(/\\\(([\s\S]+?)\\\)/g, (_match, inner: string) => `$${inner}$`);
+}
 
 /** Markdown + KaTeX renderer for AI messages (uses existing deps). */
 export function AiMarkdown({ text }: { text: string }) {
   return (
     <div className="prose-zertte space-y-2 text-[15px] leading-relaxed [&_a]:text-primary [&_code]:rounded [&_code]:bg-surface-2 [&_code]:px-1 [&_h1]:text-lg [&_h1]:font-bold [&_h2]:text-base [&_h2]:font-bold [&_h3]:font-bold [&_li]:ml-4 [&_ol]:list-decimal [&_p]:my-1 [&_strong]:font-bold [&_ul]:list-disc">
       <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
-        {text}
+        {normalizeMathDelimiters(text)}
       </ReactMarkdown>
     </div>
   );
