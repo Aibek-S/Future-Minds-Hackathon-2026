@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { BookOpen, Check, ListOrdered, Sigma, HelpCircle } from "lucide-react";
+import { BookOpen, Check, ListOrdered, Sigma, HelpCircle, X, AlertTriangle } from "lucide-react";
 import type { AiWidget } from "@/lib/types";
 import { AiMarkdown } from "./markdown";
 import { Button } from "@/components/ui/button";
+import { teacherService } from "@/lib/services/teacher";
 
 /** Reusable renderers for strict JSON widget contract. Broken widgets are dropped by backend. */
 
@@ -163,7 +164,35 @@ export function MathExpression({ payload }: { payload: { prompt: string; expecte
   );
 }
 
-export function ConfirmPreview({ payload }: { payload: { title: string; text: string } }) {
+type ConfirmStatus = "idle" | "pending" | "approved" | "rejected" | "error";
+
+export function ConfirmPreview({
+  payload,
+}: {
+  payload: { title: string; text: string; resourceType?: string; resource?: { recommendationId?: string } };
+}) {
+  const recommendationId = payload.resourceType === "LESSON_PLAN" ? payload.resource?.recommendationId : undefined;
+  const [status, setStatus] = useState<ConfirmStatus>("idle");
+  const [error, setError] = useState<string | null>(null);
+
+  async function respond(action: "approve" | "reject") {
+    if (!recommendationId || status === "pending") return;
+    setStatus("pending");
+    setError(null);
+    try {
+      if (action === "approve") {
+        await teacherService.approve(recommendationId);
+        setStatus("approved");
+      } else {
+        await teacherService.reject(recommendationId);
+        setStatus("rejected");
+      }
+    } catch (e) {
+      setStatus("error");
+      setError(e instanceof Error ? e.message : "Не удалось выполнить действие.");
+    }
+  }
+
   return (
     <div className="rounded-lg border-2 border-primary/40 bg-surface p-4 shadow-card">
       <div className="flex items-center gap-2">
@@ -173,6 +202,35 @@ export function ConfirmPreview({ payload }: { payload: { title: string; text: st
       <div className="mt-2 text-sm text-text-2">
         <AiMarkdown text={payload.text} />
       </div>
+
+      {recommendationId && status === "idle" && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button size="sm" variant="success" onClick={() => void respond("approve")}>
+            <Check className="mr-1.5 size-4" /> Принять план
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => void respond("reject")}>
+            <X className="mr-1.5 size-4" /> Отклонить
+          </Button>
+        </div>
+      )}
+      {recommendationId && status === "pending" && (
+        <p className="mt-3 text-xs font-semibold text-text-3">Сохраняю…</p>
+      )}
+      {status === "approved" && (
+        <p className="mt-3 flex items-center gap-1.5 text-sm font-bold text-success">
+          <Check className="size-4" /> План принят — урок добавлен в календарь класса.
+        </p>
+      )}
+      {status === "rejected" && (
+        <p className="mt-3 flex items-center gap-1.5 text-sm font-bold text-text-3">
+          <X className="size-4" /> Отклонено.
+        </p>
+      )}
+      {status === "error" && (
+        <p className="mt-3 flex items-center gap-1.5 text-sm font-bold text-error">
+          <AlertTriangle className="size-4" /> {error}
+        </p>
+      )}
     </div>
   );
 }

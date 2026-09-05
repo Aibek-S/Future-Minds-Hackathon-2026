@@ -11,6 +11,7 @@ import {
   TOOL_INITIALIZE_STUDENT_KNOWLEDGE,
   TOOL_GET_CLASS_OVERVIEW,
   TOOL_SEARCH_MATERIALS,
+  TOOL_CREATE_LESSON_RECOMMENDATION,
 } from './tools/ai-tools.registry';
 import { SessionKind } from '@prisma/client';
 
@@ -51,7 +52,7 @@ export const AI_TASKS: Record<AiTask, AiTaskConfig> = {
   },
   [SessionKind.ORCHESTRATOR]: {
     prompt: ORCHESTRATOR_SYSTEM_PROMPT,
-    tools: [TOOL_GET_CLASS_OVERVIEW],
+    tools: [TOOL_GET_CLASS_OVERVIEW, TOOL_CREATE_LESSON_RECOMMENDATION],
     widgets: true,
     widgetLimit: 2,
   },

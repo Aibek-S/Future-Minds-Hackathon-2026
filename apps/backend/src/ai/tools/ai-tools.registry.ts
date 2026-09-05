@@ -11,6 +11,7 @@ export const TOOL_UPDATE_STUDENT_PROFILE = 'update_student_profile';
 export const TOOL_INITIALIZE_STUDENT_KNOWLEDGE = 'initialize_student_knowledge';
 export const TOOL_GET_CLASS_OVERVIEW = 'get_class_overview';
 export const TOOL_SEARCH_MATERIALS = 'search_materials';
+export const TOOL_CREATE_LESSON_RECOMMENDATION = 'create_lesson_recommendation';
 
 /**
  * Function-calling tool schemas exposed to the LLM (OpenAI `tools` format).
@@ -130,6 +131,16 @@ export const AI_TOOL_DEFINITIONS: AiToolDefinition[] = [
     name: TOOL_GET_CLASS_OVERVIEW,
     description:
       'Возвращает статистику текущего класса учителя: средний mastery класса, сильные и слабые темы, список учеников в зоне риска (mastery < 0.4) с их общим mastery. Класс уже определён контекстом сессии — вызывай без аргументов. Используется для планирования урока или рекомендаций по классу.',
+    parameters: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
+    name: TOOL_CREATE_LESSON_RECOMMENDATION,
+    description:
+      'Создаёт реальную запись рекомендации плана урока в базе данных для текущего класса (по теме с наименьшим mastery) и возвращает её recommendationId, topicName, masteryPercent. Класс уже определён контекстом сессии — вызывай без аргументов. ОБЯЗАТЕЛЬНО вызывай этот инструмент перед тем, как показать учителю виджет CONFIRM с планом урока — recommendationId из результата нужно положить в payload.resource.recommendationId виджета, иначе кнопки Принять/Отклонить в виджете не будут работать.',
     parameters: {
       type: 'object',
       properties: {},

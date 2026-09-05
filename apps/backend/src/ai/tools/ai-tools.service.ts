@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EmbeddingsService } from '../embeddings.service';
-import { Prisma } from '@prisma/client';
+import { Prisma, RecommendationType } from '@prisma/client';
 
 const COMPLETED_MASTERY = 0.8;
 const PREREQUISITE_MASTERY = 0.4;
@@ -53,6 +53,10 @@ export class AiToolsService {
       case 'get_class_overview':
         return this.stringify(
           context.classId ? await this.getClassOverview(context.classId) : { error: 'No class context' },
+        );
+      case 'create_lesson_recommendation':
+        return this.stringify(
+          context.classId ? await this.createLessonRecommendation(context.classId) : { error: 'No class context' },
         );
       default:
         return JSON.stringify({ error: `Unknown tool: ${name}` });
@@ -120,6 +124,76 @@ export class AiToolsService {
       weakTopics: topics.filter((topic) => topic.avgMastery < 0.4).sort((a, b) => a.avgMastery - b.avgMastery),
       strongTopics: topics.filter((topic) => topic.avgMastery >= 0.7).sort((a, b) => b.avgMastery - a.avgMastery),
       studentsAtRisk: studentSummaries.filter((student) => student.overallMastery < 0.4),
+    };
+  }
+
+  /**
+   * Creates a real, pending AiRecommendation row for the class's currently
+   * weakest topic (same "lowest observed mastery" heuristic as the
+   * non-chat /orchestrator/query flow) and returns its id. The orchestrator
+   * chat embeds this id in the CONFIRM widget it shows the teacher, so the
+   * widget's Approve/Reject buttons can call the existing, already-tested
+   * /recommendations/:id/approve and /reject endpoints directly.
+   */
+  private async createLessonRecommendation(classId: string) {
+    const classroom = await this.prisma.class.findUnique({ where: { id: classId }, select: { teacherId: true } });
+    if (!classroom) {
+      return { error: 'Class not found' };
+    }
+
+    const knowledge = await this.prisma.studentKnowledge.findMany({
+      where: { student: { classId } },
+      include: { topic: { select: { id: true, name: true } } },
+    });
+
+    let topic: { id: string; name: string; mastery: number };
+    if (knowledge.length) {
+      const grouped = new Map<string, { id: string; name: string; values: number[] }>();
+      for (const item of knowledge) {
+        const current = grouped.get(item.topicId) ?? { id: item.topic.id, name: item.topic.name, values: [] };
+        current.values.push(item.mastery);
+        grouped.set(item.topicId, current);
+      }
+      topic = [...grouped.values()]
+        .map((item) => ({ id: item.id, name: item.name, mastery: item.values.reduce((s, v) => s + v, 0) / item.values.length }))
+        .sort((a, b) => a.mastery - b.mastery)[0];
+    } else {
+      const fallback = await this.prisma.topic.findFirst({ orderBy: { createdAt: 'asc' }, select: { id: true, name: true } });
+      if (!fallback) {
+        return { error: 'No topics available for this class' };
+      }
+      topic = { ...fallback, mastery: 0 };
+    }
+
+    const date = new Date();
+    date.setDate(date.getDate() + 1);
+    const planJson = {
+      objectives: [`Разобраться в ключевых идеях темы «${topic.name}»`],
+      warmup: `Быстрое повторение базы перед темой «${topic.name}»`,
+      explanation: `Объяснение и разбор примеров по теме «${topic.name}»`,
+      practice: [`Самостоятельное решение задач по теме «${topic.name}»`],
+      differentiatedTasks: {
+        weak: ['Разбор с подсказками и облегчённая практика'],
+        strong: ['Усложнённая прикладная задача'],
+      },
+      assessment: 'Итоговая проверка с одной ключевой задачей',
+      homework: `Дополнительная практика по теме «${topic.name}»`,
+    };
+
+    const recommendation = await this.prisma.aiRecommendation.create({
+      data: {
+        teacherId: classroom.teacherId,
+        classId,
+        type: RecommendationType.LESSON_PLAN,
+        payload: { topicId: topic.id, date: date.toISOString(), planJson } as Prisma.InputJsonValue,
+        reasoning: `Наименьший наблюдаемый mastery класса: ${Math.round(topic.mastery * 100)}% по теме «${topic.name}».`,
+      },
+    });
+
+    return {
+      recommendationId: recommendation.id,
+      topicName: topic.name,
+      masteryPercent: Math.round(topic.mastery * 100),
     };
   }
 
