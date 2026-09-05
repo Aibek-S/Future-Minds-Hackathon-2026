@@ -10,11 +10,22 @@ import { AiMarkdown, StreamingDots } from "./markdown";
 import { WidgetRenderer } from "./widgets";
 import { aiToolLabel } from "@/lib/ai-tool-labels";
 
+/** One piece of an assistant reply, in the exact order the backend sent it. */
+export type ChatBlock = { kind: "text"; text: string } | { kind: "widget"; widget: AiWidget };
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
+  /** Raw text the user typed. Unused for assistant messages — see `blocks`. */
   text: string;
-  widgets: AiWidget[];
+  /**
+   * Ordered content for assistant messages. The backend can interleave several
+   * `message`/`widget` SSE events in one reply (e.g. text, QUIZ, text, MATH_EXPRESSION);
+   * blocks preserve that order so a widget renders exactly between the text
+   * segments meant to surround it, instead of all text merging into one blob
+   * with every widget dumped at the end.
+   */
+  blocks: ChatBlock[];
   streaming?: boolean;
   /** Names of backend tools the AI invoked while producing this message, in call order. */
   tools?: string[];
@@ -80,11 +91,11 @@ export function AiChatPanel({
   }, [messages]);
 
   function pushUser(text: string) {
-    setMessages((m) => [...m, { id: nextId(), role: "user", text, widgets: [] }]);
+    setMessages((m) => [...m, { id: nextId(), role: "user", text, blocks: [] }]);
   }
 
   function pushAssistant(text: string) {
-    setMessages((m) => [...m, { id: nextId(), role: "assistant", text, widgets: [] }]);
+    setMessages((m) => [...m, { id: nextId(), role: "assistant", text: "", blocks: [{ kind: "text", text }] }]);
   }
 
   async function send(raw?: string) {
@@ -101,7 +112,13 @@ export function AiChatPanel({
       } catch {
         setMessages((m) => [
           ...m,
-          { id: nextId(), role: "assistant", text: "Не удалось связаться с ИИ. Проверьте подключение и попробуйте ещё раз.", widgets: [], error: true },
+          {
+            id: nextId(),
+            role: "assistant",
+            text: "",
+            blocks: [{ kind: "text", text: "Не удалось связаться с ИИ. Проверьте подключение и попробуйте ещё раз." }],
+            error: true,
+          },
         ]);
       }
       return;
@@ -119,13 +136,33 @@ export function AiChatPanel({
     const id = nextId();
     setMessages((m) => [
       ...m,
-      { id, role: "assistant", text: "", widgets: [], streaming: true, tools: [] },
+      { id, role: "assistant", text: "", blocks: [], streaming: true, tools: [] },
     ]);
 
+    // Each SSE `message` event is either one full text segment (widget-bearing
+    // scenarios, which buffer the whole reply) or one small token chunk (plain
+    // streaming scenarios). Either way, merging it into the last block only
+    // when that block is already text — and starting a fresh block right
+    // after a widget — reconstructs the backend's exact text/widget order
+    // without the frontend needing to know which mode produced this reply.
     const appendText = (chunk: string) =>
-      setMessages((m) => m.map((msg) => (msg.id === id ? { ...msg, text: msg.text + chunk } : msg)));
+      setMessages((m) =>
+        m.map((msg) => {
+          if (msg.id !== id) return msg;
+          const blocks = [...msg.blocks];
+          const last = blocks[blocks.length - 1];
+          if (last?.kind === "text") {
+            blocks[blocks.length - 1] = { kind: "text", text: last.text + chunk };
+          } else {
+            blocks.push({ kind: "text", text: chunk });
+          }
+          return { ...msg, blocks };
+        }),
+      );
     const addWidget = (w: AiWidget) =>
-      setMessages((m) => m.map((msg) => (msg.id === id ? { ...msg, widgets: [...msg.widgets, w] } : msg)));
+      setMessages((m) =>
+        m.map((msg) => (msg.id === id ? { ...msg, blocks: [...msg.blocks, { kind: "widget", widget: w }] } : msg)),
+      );
     const addTool = (tool: string) =>
       setMessages((m) =>
         m.map((msg) =>
@@ -144,8 +181,12 @@ export function AiChatPanel({
         onError: () =>
           setMessages((m) =>
             m.map((msg) =>
-              msg.id === id && !msg.text
-                ? { ...msg, text: "ИИ не ответил. Попробуйте переформулировать вопрос.", error: true }
+              msg.id === id && msg.blocks.length === 0
+                ? {
+                    ...msg,
+                    blocks: [{ kind: "text", text: "ИИ не ответил. Попробуйте переформулировать вопрос." }],
+                    error: true,
+                  }
                 : msg,
             ),
           ),
@@ -212,28 +253,41 @@ export function AiChatPanel({
                     })}
                   </div>
                 )}
-                <div
-                  className={`inline-block rounded-lg px-4 py-2.5 text-left ${
-                    m.role === "user"
-                      ? "bg-primary text-white"
-                      : m.error
-                        ? "border-2 border-error/30 bg-[#FEF2F2] text-error"
-                        : "border border-border bg-surface shadow-card"
-                  }`}
-                >
-                  {m.role === "user" ? (
+                {m.role === "user" ? (
+                  <div className="inline-block rounded-lg bg-primary px-4 py-2.5 text-left text-white">
                     <p className="whitespace-pre-wrap">{m.text}</p>
-                  ) : m.error ? (
+                  </div>
+                ) : m.error ? (
+                  <div className="inline-block rounded-lg border-2 border-error/30 bg-[#FEF2F2] px-4 py-2.5 text-left text-error">
                     <div className="flex items-start gap-2">
                       <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                      <p>{m.text}</p>
+                      <p>{m.blocks[0]?.kind === "text" ? m.blocks[0].text : ""}</p>
                     </div>
-                  ) : m.text ? (
-                    <AiMarkdown text={m.text} />
-                  ) : m.streaming ? (
-                    <StreamingDots />
-                  ) : null}
-                </div>
+                  </div>
+                ) : m.blocks.length === 0 ? (
+                  m.streaming ? (
+                    <div className="inline-block rounded-lg border border-border bg-surface px-4 py-2.5 text-left shadow-card">
+                      <StreamingDots />
+                    </div>
+                  ) : null
+                ) : (
+                  // Render blocks in the exact order the backend sent them, so a
+                  // widget lands between the two text segments meant to surround it.
+                  m.blocks.map((block, i) =>
+                    block.kind === "text" ? (
+                      <div
+                        key={i}
+                        className="inline-block rounded-lg border border-border bg-surface px-4 py-2.5 text-left shadow-card"
+                      >
+                        <AiMarkdown text={block.text} />
+                      </div>
+                    ) : (
+                      <div key={i} onClickCapture={(e) => e.stopPropagation()}>
+                        <WidgetRenderer widget={block.widget} />
+                      </div>
+                    ),
+                  )
+                )}
                 {m.error && (
                   <button
                     onClick={retry}
@@ -242,11 +296,6 @@ export function AiChatPanel({
                     <RotateCcw className="size-3" /> Повторить попытку
                   </button>
                 )}
-                {m.widgets.map((w, i) => (
-                  <div key={i} onClickCapture={(e) => e.stopPropagation()}>
-                    <WidgetRenderer widget={w} />
-                  </div>
-                ))}
               </div>
             </motion.div>
           ))}
