@@ -201,7 +201,7 @@ function OrchestratorChat({
         scenario="orchestrator/chat"
         autoStartGreeting
         greeting={`Привет! Я Зере — изучила статистику вашего класса. Спросите: «Что делать на следующем уроке?»`}
-        contextPrefix={`classId=${classId}`}
+        classId={classId}
         assistantAvatar={<ZereAvatar size={30} mood="thinking" />}
         quickPrompts={[
           "Что делать на следующем уроке?",

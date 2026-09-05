@@ -44,6 +44,7 @@ export function AiChatPanel({
   greeting,
   quickPrompts = [],
   contextPrefix,
+  classId,
   className,
   autoStartGreeting = true,
   onAssistantDone,
@@ -55,6 +56,8 @@ export function AiChatPanel({
   quickPrompts?: string[];
   /** Hidden context prepended to each user message so the AI stays on-topic. */
   contextPrefix?: string;
+  /** Required for the orchestrator scenario: scopes get_class_overview to this class. */
+  classId?: string;
   className?: string;
   autoStartGreeting?: boolean;
   onAssistantDone?: () => void;
@@ -173,7 +176,7 @@ export function AiChatPanel({
     await tutorService.send(
       scenario,
       sid,
-      { content: contextPrefix ? `${contextPrefix}\n\n${content}` : content },
+      { content: contextPrefix ? `${contextPrefix}\n\n${content}` : content, classId },
       {
         onText: appendText,
         onWidget: addWidget,

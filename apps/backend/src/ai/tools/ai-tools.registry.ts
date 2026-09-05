@@ -129,16 +129,10 @@ export const AI_TOOL_DEFINITIONS: AiToolDefinition[] = [
   {
     name: TOOL_GET_CLASS_OVERVIEW,
     description:
-      'Возвращает статистику класса учителя: средний mastery класса, сильные и слабые темы, список учеников в зоне риска (mastery < 0.4) с их общим mastery. Используется для планирования урока или рекомендаций по классу.',
+      'Возвращает статистику текущего класса учителя: средний mastery класса, сильные и слабые темы, список учеников в зоне риска (mastery < 0.4) с их общим mastery. Класс уже определён контекстом сессии — вызывай без аргументов. Используется для планирования урока или рекомендаций по классу.',
     parameters: {
       type: 'object',
-      properties: {
-        classId: {
-          type: 'string',
-          description: 'ID класса.',
-        },
-      },
-      required: ['classId'],
+      properties: {},
       additionalProperties: false,
     },
   },

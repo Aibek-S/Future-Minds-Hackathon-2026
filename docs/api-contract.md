@@ -347,7 +347,7 @@ data: { "usage": { "inputTokens": 123, "outputTokens": 45, "model": "deepseek-ch
 - `get_subject_summary(studentId)` — сравнение предметов
 - `get_roadmap(studentId, subjectId?)` — план обучения
 - `update_student_profile(goals, preferences)` — применяется через валидированный сервис
-- `get_class_overview(classId)` — статистика класса (учитель)
+- `get_class_overview()` — статистика класса (учитель); класс берётся из `classId` сессии, а не из аргумента
 
 ### Лимиты
 - `AI_MAX_WIDGETS` — макс. виджетов на сообщение (env, дефолт 3)
