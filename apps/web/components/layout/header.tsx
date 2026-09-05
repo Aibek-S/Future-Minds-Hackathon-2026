@@ -10,6 +10,7 @@ import { useT } from "@/lib/i18n/use-t";
 import { LANGUAGES } from "@/lib/i18n/dictionaries";
 import type { UiLanguage } from "@/lib/types";
 import { CoinBalance, MasteryBadge, StreakBadge } from "@/components/gamification/badges";
+import { SearchBar } from "@/components/ui/search-bar";
 
 export function AppHeader({ onMenu }: { onMenu?: () => void }) {
   const { t, lang, setLang } = useT();
@@ -45,6 +46,10 @@ export function AppHeader({ onMenu }: { onMenu?: () => void }) {
           </span>
           <span className="hidden text-lg font-black tracking-tight text-primary sm:block">ZERTTE</span>
         </Link>
+
+        <div className="ml-4 flex-1 max-w-xs lg:max-w-md hidden lg:block">
+          <SearchBar />
+        </div>
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
           <StreakBadge />

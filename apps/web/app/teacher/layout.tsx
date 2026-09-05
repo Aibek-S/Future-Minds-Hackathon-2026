@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { Menu } from "lucide-react";
+import { Menu, Search } from "lucide-react";
 import { tokenStore } from "@/lib/api/client";
 import { useMe } from "@/lib/hooks/use-auth";
 import { TeacherSidebar } from "@/components/layout/nav";
+import { SearchBar } from "@/components/ui/search-bar";
 
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -42,6 +43,9 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
         >
           <Menu className="size-5" />
         </button>
+        <div className="flex-1">
+          <SearchBar placeholder="Поиск материалов..." />
+        </div>
         <span className="text-base font-black">ZERTTE</span>
         <span className="rounded-full bg-primary-light px-2 py-0.5 text-[11px] font-bold text-primary">Учитель</span>
       </header>

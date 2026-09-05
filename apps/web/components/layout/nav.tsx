@@ -22,6 +22,7 @@ import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 import { useT } from "@/lib/i18n/use-t";
 import { useMe, useLogout } from "@/lib/hooks/use-auth";
+import { SearchBar } from "@/components/ui/search-bar";
 
 export const STUDENT_NAV = [
   { href: "/home", icon: Home, key: "home" },
@@ -134,6 +135,9 @@ export function TeacherSidebar({ open, onClose }: { open?: boolean; onClose?: ()
           >
             <X className="size-5" />
           </button>
+        </div>
+        <div className="border-t border-border px-3 py-2">
+          <SearchBar placeholder="Поиск по материалам..." />
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
           {TEACHER_NAV.map(({ href, icon: Icon, label }) => (

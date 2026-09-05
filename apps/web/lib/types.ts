@@ -367,3 +367,19 @@ export interface LoginResponse {
   accessToken: string;
   refreshToken?: string;
 }
+
+/* ---------------- Search (RAG) ---------------- */
+
+export interface SearchMaterial {
+  id: string;
+  topicId: string;
+  content: string;
+  metadata: Record<string, unknown>;
+  similarity: number;
+}
+
+export interface SearchResult {
+  materials: SearchMaterial[];
+  fallbackToGeneralKnowledge: boolean;
+  similarityThreshold: number;
+}

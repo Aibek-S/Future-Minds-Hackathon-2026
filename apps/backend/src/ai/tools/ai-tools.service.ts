@@ -5,7 +5,7 @@ import { Prisma } from '@prisma/client';
 
 const COMPLETED_MASTERY = 0.8;
 const PREREQUISITE_MASTERY = 0.4;
-const MATERIAL_SIMILARITY_THRESHOLD = 0.65;
+const MATERIAL_SIMILARITY_THRESHOLD = 0.35;
 
 export interface ToolExecutionContext {
   studentId?: string;

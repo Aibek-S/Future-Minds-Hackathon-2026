@@ -30,13 +30,20 @@ export class AttemptsService {
 
     const answerCheck = this.answerChecker.evaluate(dto.answer, task.correctAnswer);
     const result = await this.runSerializable(() => this.prisma.$transaction(async (transaction) => {
-      const attemptNumber = (await transaction.attempt.count({ where: { taskId, studentId } })) + 1;
+      const uniqueTasksAttempted = await transaction.attempt.groupBy({
+        by: ['taskId'],
+        where: { studentId, task: { topicId: task.topicId } },
+      });
+      const attemptNumber = uniqueTasksAttempted.length + 1;
+
       const previous = await transaction.studentKnowledge.findUnique({
         where: { studentId_topicId: { studentId, topicId: task.topicId } },
         select: { mastery: true, attempts: true, correctAttempts: true },
       });
       const masteryBefore = previous?.mastery ?? 0;
-      const currentResult = answerCheck.correct ? (attemptNumber === 1 ? 1 : attemptNumber === 2 ? 0.5 : 0.1) : 0;
+      const currentResult = answerCheck.correct
+        ? Math.max(0.1, 1 - (uniqueTasksAttempted.length * 0.1))
+        : 0;
       const masteryAfter = 0.7 * masteryBefore + 0.3 * currentResult;
 
       await transaction.attempt.create({

@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowRight, Plus } from "lucide-react";
+import { ArrowRight, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { MetricCard } from "@/components/teacher/dashboard";
 import { teacherService } from "@/lib/services/teacher";
 import { classesService } from "@/lib/services/classes";
 import { useMe } from "@/lib/hooks/use-auth";
+import { SearchBar } from "@/components/ui/search-bar";
 
 export default function TeacherDashboard() {
   const me = useMe();
@@ -46,9 +47,12 @@ export default function TeacherDashboard() {
           <p className="text-sm font-bold text-text-2">Добрый день, {me.data?.name}!</p>
           <h1 className="text-3xl font-black">Ваши классы</h1>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="size-4" /> Создать класс
-        </Button>
+        <div className="flex items-center gap-3 flex-wrap">
+          <SearchBar className="w-64" placeholder="Поиск по материалам..." />
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="size-4" /> Создать класс
+          </Button>
+        </div>
       </div>
 
       {(classes.data ?? []).length === 0 ? (

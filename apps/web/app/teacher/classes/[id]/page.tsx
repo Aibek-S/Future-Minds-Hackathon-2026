@@ -16,6 +16,7 @@ import { lessonsService, assignmentsService } from "@/lib/services/lessons";
 import { classesService, contentService } from "@/lib/services/classes";
 import { topicsService } from "@/lib/services/topics";
 import type { ClassStudent, LessonSummary, PlanJson, Task } from "@/lib/types";
+import { SearchBar } from "@/components/ui/search-bar";
 
 const TABS = ["overview", "heatmap", "students", "lessons", "assignments", "content"] as const;
 const TAB_LABELS: Record<(typeof TABS)[number], string> = {
@@ -731,6 +732,7 @@ function ContentTab({ classId }: { classId: string }) {
   const [content, setContent] = useState("");
   const [materialTopicId, setMaterialTopicId] = useState("");
   const [materialText, setMaterialText] = useState("");
+  const [searchTopicId, setSearchTopicId] = useState("");
 
   const addTopic = useMutation({
     mutationFn: () => contentService.addTopicToClass(classId, { name: topicName, subjectId }),
@@ -747,8 +749,18 @@ function ContentTab({ classId }: { classId: string }) {
     mutationFn: () => contentService.uploadMaterial(materialTopicId, { content: materialText }),
   });
 
+  const selectedSearchTopic = topics.data?.find((t) => t.id === searchTopicId);
+
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
+    <div className="space-y-6">
+      {/* Search bar for materials */}
+      <SearchBar
+        placeholder="Поиск по материалам класса..."
+        topicId={searchTopicId || undefined}
+        className="max-w-md"
+      />
+
+      <div className="grid gap-6 lg:grid-cols-2">
       {/* Add topic */}
       <section className="rounded-xl border border-border bg-surface p-5 shadow-card">
         <h3 className="mb-4 font-black">Добавить тему в класс</h3>
@@ -794,6 +806,7 @@ function ContentTab({ classId }: { classId: string }) {
           </Button>
         </div>
       </section>
+      </div>
     </div>
   );
 }
